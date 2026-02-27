@@ -1,0 +1,413 @@
+/* Reset and Base Styles */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* Hide default scrollbars */
+::-webkit-scrollbar {
+    display: none;
+    width: 0;
+}
+
+html {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    overflow-x: hidden;
+}
+
+body {
+    width: 100vw;
+    max-width: 100%;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    font-family: 'Special Elite', monospace;
+    color: #1c1c1c;
+    background-color: transparent;
+    overflow-x: hidden;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* Background Image */
+.bg-texture {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    pointer-events: none;
+    background-image: url('background.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+/* Layout */
+.content-wrapper {
+    position: relative;
+    z-index: 10;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 100px 20px 200px;
+    /* Adjusted wrapper padding for scroll space */
+}
+
+.site-header {
+    position: fixed;
+    top: 40px;
+    left: 0;
+    width: 100vw;
+    z-index: 1000;
+    text-align: center;
+    pointer-events: none;
+}
+
+.site-header nav,
+.site-header h1 {
+    pointer-events: auto;
+}
+
+.logo {
+    font-size: 4rem;
+    font-weight: 400;
+    margin-bottom: 5px;
+    letter-spacing: -2px;
+    opacity: 0.9;
+}
+
+.main-nav {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+}
+
+.main-nav a {
+    font-size: 1.1rem;
+    color: #4a4a4a;
+    transition: color 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.main-nav a:hover {
+    color: #000;
+}
+
+/* Post Container (Pinned 3D Section) */
+.sticky-card-section {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    perspective: 1200px;
+    /* Crucial for 3D depth as cards peel back */
+    transform-style: preserve-3d;
+}
+
+.post {
+    padding: 40px;
+    border-radius: 24px;
+
+    /* Absolute positioning handled by GSAP pinning */
+    position: absolute !important;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: auto;
+    /* Corrects centering */
+    width: 85vw;
+    max-width: 800px;
+    height: fit-content;
+
+    /* Origin at bottom allows it to pivot up and flip back natively */
+    transform-origin: bottom center;
+    will-change: transform, filter, opacity;
+}
+
+/* ------------------------------------
+   Liquid Glass Rotary Dial Pagination
+   ------------------------------------ */
+.card-dial {
+    position: absolute;
+    right: 40px;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+    height: fit-content;
+    z-index: 100;
+    /* allow clicks on arrows */
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.dial-window {
+    position: relative;
+    height: 90px;
+    width: 20px;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+    /* dots are not clickable */
+}
+
+.dial-track {
+    position: absolute;
+    top: 50%;
+    /* Note: NO transform: translateY(-50%) here because GSAP animates inline y, which overwrites it and causes jumps! */
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    align-items: center;
+    margin-top: -6px;
+}
+
+.dial-arrow {
+    color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.dial-arrow:hover {
+    color: rgba(0, 0, 0, 0.9);
+    background: rgba(255, 255, 255, 0.8);
+    transform: scale(1.15);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.dial-arrow:active {
+    transform: scale(0.95);
+}
+
+.dial-arrow svg {
+    width: 18px;
+    height: 18px;
+}
+
+.dial-dot {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    border-radius: 50%;
+
+    /* Dark Liquid glass aesthetic for better contrast */
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(0, 0, 0, 0.25);
+    box-shadow:
+        inset 0 1px 3px rgba(0, 0, 0, 0.3),
+        inset 0 -1px 2px rgba(255, 255, 255, 0.4),
+        0 2px 4px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(4px);
+
+    transform: scale(0);
+    opacity: 0;
+    will-change: transform, opacity;
+}
+
+/* Hover transform removed to avoid GSAP conflict */
+
+.date {
+    font-size: 0.9rem;
+    color: #444;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+    /* Stronger shadow */
+}
+
+.post h2 {
+    font-size: 2.4rem;
+    margin: 0 0 16px 0;
+    font-weight: normal;
+    line-height: 1.2;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    /* Stronger shadow */
+}
+
+.excerpt {
+    font-size: 1.15rem;
+    line-height: 1.6;
+    color: #222;
+    margin-bottom: 25px;
+    text-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+    /* Stronger shadow */
+}
+
+.site-footer {
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    width: 100vw;
+    text-align: center;
+    color: rgba(0, 0, 0, 0.4);
+    font-size: 0.9rem;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+/* Liquid Metal / Glassy Morphing Global Class */
+.glassy-effect {
+    /* Multi-layered transparent gradient */
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.0) 100%);
+
+    /* Fine subtle border */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+
+    /* Liquid edge shine: Thick white inset shadows and outer drop shadows */
+    box-shadow:
+        0 25px 50px rgba(0, 0, 0, 0.08),
+        /* Deep outer drop shadow */
+        0 8px 24px rgba(0, 0, 0, 0.04),
+        /* Medium outer shadow */
+        0 0 0 1px rgba(255, 255, 255, 0.3),
+        /* Faint glowing outer halo */
+        inset 0 0 0 2px rgba(255, 255, 255, 0.5),
+        /* Sharp inner white rim light */
+        inset 0 6px 18px rgba(255, 255, 255, 0.8),
+        /* Thick, diffuse top gloss */
+        inset 0 -6px 18px rgba(255, 255, 255, 0.4),
+        /* Diffuse bottom reflection */
+        inset 0 -2px 6px rgba(0, 0, 0, 0.05);
+    /* Subtle dark inner bottom ground */
+
+    position: relative;
+    overflow: hidden;
+}
+
+/* Shimmer reflection removed as requested */
+
+/* Standard Buttons */
+.btn-standard {
+    padding: 12px 28px;
+    font-size: 1.05rem;
+    font-weight: 500;
+    border-radius: 40px;
+    cursor: pointer;
+    font-family: inherit;
+    color: #222;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    outline: none;
+    /* Faint shadow on text for depth, as requested */
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.18);
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease;
+}
+
+.btn-standard:hover {
+    transform: scale(1.05);
+}
+
+.btn-standard:active {
+    transform: scale(0.95);
+    box-shadow:
+        0 5px 10px rgba(0, 0, 0, 0.05),
+        inset 0 2px 5px rgba(0, 0, 0, 0.1),
+        inset 0 10px 20px rgba(255, 255, 255, 0.1);
+}
+
+/* Morphing Liquid Nav Component */
+.morph-container {
+    position: fixed;
+    bottom: 40px;
+    right: 40px;
+    z-index: 999;
+}
+
+.morph-pill {
+    display: flex;
+    align-items: center;
+    border-radius: 40px;
+    width: 70px;
+    /* Base circle */
+    height: 70px;
+    cursor: pointer;
+    box-shadow:
+        0 20px 40px rgba(0, 0, 0, 0.1),
+        0 5px 15px rgba(0, 0, 0, 0.05),
+        inset 0 4px 8px rgba(255, 255, 255, 1),
+        inset 0 -4px 8px rgba(0, 0, 0, 0.1),
+        inset 0 15px 30px rgba(255, 255, 255, 0.5);
+    /* GSAP will animate the width */
+}
+
+/* Hide the glossy shimmer effect from the pill so we control it differently if needed, 
+   but retaining it works quite well for the glassy morph. */
+
+.main-icon-wrapper {
+    width: 70px;
+    /* Fixed size */
+    height: 70px;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    position: relative;
+}
+
+.icon-lucide {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    color: #222;
+}
+
+.nav-icons {
+    display: flex;
+    gap: 15px;
+    padding-right: 20px;
+    /* Right padding to balance out the icon on the left */
+}
+
+.nav-icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+
+    /* Internal glass effect */
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.8),
+        0 4px 10px rgba(0, 0, 0, 0.05);
+
+    color: #444;
+    transition: background 0.3s, transform 0.2s, color 0.3s;
+}
+
+.nav-icon .icon-lucide {
+    position: relative;
+    width: 20px;
+    height: 20px;
+}
+
+.nav-icon:hover {
+    background: rgba(255, 255, 255, 0.7);
+    color: #000;
+    transform: translateY(-2px);
+}

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimalist Tactile Blog</title>
+    <!-- Fonts: Typewriter theme -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Dependencies: GSAP for smooth morphing animations, Lucide for sleek icons -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <!-- Lenis for smooth scrolling -->
+    <script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+    <!-- Background Texture -->
+    <div class="bg-texture"></div>
+
+    <!-- Header Section -->
+    <header class="site-header">
+        <h1 class="logo">Tactile.</h1>
+        <nav class="main-nav">
+            <a href="#">Articles</a>
+            <a href="#">Gallery</a>
+            <a href="#">Studio</a>
+        </nav>
+    </header>
+
+    <!-- The Pinned Section containing the cards -->
+    <main class="sticky-card-section">
+        <article class="post glassy-effect">
+            <p class="date">October 24, 2026</p>
+            <h2>The Art of Digital Paper</h2>
+            <p class="excerpt">Exploring the intersection of physical textures and virtual interfaces. How WebGL shaders
+                can breathe life into flat screens by generating procedural grain, fibers, and subtle ambient lighting
+                variations.</p>
+            <button class="btn-standard glassy-effect">Read Story</button>
+        </article>
+
+        <article class="post glassy-effect">
+            <p class="date">October 20, 2026</p>
+            <h2>Liquid Interfaces</h2>
+            <p class="excerpt">Moving beyond rigid boxes. Designing elements that feel like viscous fluids and heavy,
+                refractive glass. A deep dive into using CSS backdrop-filters and sophisticated shadowing techniques to
+                emulate volume.</p>
+            <button class="btn-standard glassy-effect">Read Story</button>
+        </article>
+
+        <article class="post glassy-effect">
+            <p class="date">September 12, 2026</p>
+            <h2>Typography as Texture</h2>
+            <p class="excerpt">A monospaced homage. Why typewriter fonts like Special Elite bring a necessary friction
+                back to hyper-polished digital environments.</p>
+            <button class="btn-standard glassy-effect">Read Story</button>
+        </article>
+
+        <article class="post glassy-effect">
+            <p class="date">August 05, 2026</p>
+            <h2>Depth in Flatness</h2>
+            <p class="excerpt">Creating an illusion of space along the Z-axis without relying on overt realism. Finding
+                the balance between minimalism and tactile physics in UI.</p>
+            <button class="btn-standard glassy-effect">Read Story</button>
+        </article>
+
+        <article class="post glassy-effect">
+            <p class="date">July 22, 2026</p>
+            <h2>The New Skeuomorphism</h2>
+            <p class="excerpt">Why early iOS design principles are returning to modern interfaces, bringing back
+                shadows, textures, and physical affordances.</p>
+            <button class="btn-standard glassy-effect">Read Story</button>
+        </article>
+
+        <article class="post glassy-effect">
+            <p class="date">June 14, 2026</p>
+            <h2>Kinetic Typography</h2>
+            <p class="excerpt">Animating words to behave like physical objects. Gravity, friction, and tension as
+                applied to digital typefaces.</p>
+            <button class="btn-standard glassy-effect">Read Story</button>
+        </article>
+
+        <article class="post glassy-effect">
+            <p class="date">May 09, 2026</p>
+            <h2>Minimalist Color Theory</h2>
+            <p class="excerpt">Relying on stark contrast and highly selective palettes to define spaces normally
+                delineated by borders and bounds.</p>
+            <button class="btn-standard glassy-effect">Read Story</button>
+        </article>
+
+        <article class="post glassy-effect">
+            <p class="date">April 02, 2026</p>
+            <h2>Tactile Feedback</h2>
+            <p class="excerpt">How haptic responses and micro-animations bridge the gap between touching glass and
+                feeling a button click.</p>
+            <button class="btn-standard glassy-effect">Read Story</button>
+        </article>
+
+        <article class="post glassy-effect">
+            <p class="date">March 18, 2026</p>
+            <h2>Designing the Unseen</h2>
+            <p class="excerpt">The negative space that forms the foundation of all premium interfaces. Letting the
+                design breathe to highlight the content.</p>
+            <button class="btn-standard glassy-effect">Read Story</button>
+        </article>
+    </main>
+
+    <!-- Footer Section -->
+    <footer class="site-footer">
+        <p>&copy; 2026 Tactile Blog. All rights reserved.</p>
+    </footer>
+
+    <!-- Morphing Liquid Metal Nav Button -->
+    <div class="morph-container">
+        <div class="morph-pill glassy-effect" id="morphPill">
+            <div class="main-icon-wrapper" id="menuTrigger">
+                <i data-lucide="menu" class="icon-lucide"></i>
+                <i data-lucide="x" class="icon-lucide icon-close" style="display:none; opacity:0;"></i>
+            </div>
+            <div class="nav-icons" id="navIconsContainer">
+                <a href="#" class="nav-icon"><i data-lucide="home"></i></a>
+                <a href="#" class="nav-icon"><i data-lucide="search"></i></a>
+                <a href="#" class="nav-icon"><i data-lucide="user"></i></a>
+                <a href="#" class="nav-icon"><i data-lucide="settings"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
