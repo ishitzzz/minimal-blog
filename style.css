@@ -296,35 +296,31 @@ a {
 
 /* Liquid Metal / Glassy Morphing Global Class */
 .glassy-effect {
-    /* Highly transparent center with subtle gradients at edges */
-    background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(255, 255, 255, 0.15) 100%);
+    /* Multi-layered transparent gradient */
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.0) 100%);
 
-    /* Heavy blurring and saturation for strong refraction */
-    backdrop-filter: blur(40px) saturate(140%);
-    -webkit-backdrop-filter: blur(40px) saturate(140%);
+    /* Fine subtle border */
+    border: 1px solid rgba(255, 255, 255, 0.2);
 
-    /* Surface tension beads: soft glow, inset rims, outer drop shadows */
+    /* Liquid edge shine: Thick white inset shadows and outer drop shadows */
     box-shadow:
-        0 30px 60px rgba(0, 0, 0, 0.1),
-        0 10px 20px rgba(0, 0, 0, 0.05),
-        inset 0 0 0 1px rgba(255, 255, 255, 0.4),
-        inset 0 2px 12px rgba(255, 255, 255, 0.6),
-        inset 0 -2px 10px rgba(0, 0, 0, 0.05);
+        0 25px 50px rgba(0, 0, 0, 0.08),
+        /* Deep outer drop shadow */
+        0 8px 24px rgba(0, 0, 0, 0.04),
+        /* Medium outer shadow */
+        0 0 0 1px rgba(255, 255, 255, 0.3),
+        /* Faint glowing outer halo */
+        inset 0 0 0 2px rgba(255, 255, 255, 0.5),
+        /* Sharp inner white rim light */
+        inset 0 6px 18px rgba(255, 255, 255, 0.8),
+        /* Thick, diffuse top gloss */
+        inset 0 -6px 18px rgba(255, 255, 255, 0.4),
+        /* Diffuse bottom reflection */
+        inset 0 -2px 6px rgba(0, 0, 0, 0.05);
+    /* Subtle dark inner bottom ground */
 
-    border-radius: 40px;
-    /* Apple UI style rounded corners */
-    border: none;
     position: relative;
     overflow: hidden;
-}
-
-/* We want the button to use the glassy material, but with its own pill shape */
-.btn-standard.glassy-effect {
-    border-radius: 40px;
-    box-shadow:
-        0 10px 20px rgba(0, 0, 0, 0.1),
-        inset 0 0 0 1px rgba(255, 255, 255, 0.5),
-        inset 0 2px 8px rgba(255, 255, 255, 0.4);
 }
 
 /* Shimmer reflection removed as requested */
@@ -358,21 +354,6 @@ a {
         0 5px 10px rgba(0, 0, 0, 0.05),
         inset 0 2px 5px rgba(0, 0, 0, 0.1),
         inset 0 10px 20px rgba(255, 255, 255, 0.1);
-}
-
-/* =========================================
-   Expanding Portal Morph Styling
-   ========================================= */
-
-.bloom-portal {
-    position: fixed;
-    /* initial state matches card entirely via JS */
-    z-index: 2000;
-    pointer-events: none;
-    /* Will-change for buttery smooth morphing */
-    will-change: transform, width, height, border-radius, opacity;
-    display: none;
-    opacity: 0;
 }
 
 /* =========================================
@@ -432,8 +413,6 @@ a {
         bottom: 10px;
         font-size: 0.8rem;
     }
-
-
 }
 
 @media (max-width: 480px) {
