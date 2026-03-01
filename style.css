@@ -147,8 +147,7 @@ a {
     margin: auto;
     /* Corrects centering */
     width: 80vw;
-    max-width: 650px;
-    min-height: 55vh;
+    max-width: 850px;
     height: fit-content;
     display: flex;
     flex-direction: column;
@@ -335,6 +334,7 @@ a {
     align-items: center;
     justify-content: center;
     outline: none;
+    align-self: flex-start;
     /* Faint shadow on text for depth, as requested */
     text-shadow: 0 4px 8px rgba(0, 0, 0, 0.18);
     transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease;
@@ -381,6 +381,11 @@ a {
         padding: 35px 30px;
         bottom: 0;
         min-height: 50vh;
+        max-width: 650px;
+    }
+
+    .btn-standard {
+        align-self: stretch;
     }
 
     .post h2 {
