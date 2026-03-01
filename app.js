@@ -177,3 +177,105 @@ downArrow.addEventListener('click', () => {
     let targetScroll = st.start + (targetIndex / (totalCards - 1)) * (st.end - st.start);
     lenis.scrollTo(targetScroll, { duration: 1.2, lock: false });
 });
+
+// ==========================================
+// EXPANDING LIQUID GLASS ARTICLE TRANSITION
+// ==========================================
+const articleOverlay = document.querySelector('.article-overlay');
+const articleGlassBg = document.querySelector('.article-glass-bg');
+const articleContent = document.querySelector('.article-content');
+const closeArticleBtn = document.querySelector('.close-article');
+const articleTitleContainer = document.querySelector('.article-title');
+const articleDateContainer = document.querySelector('.article-date');
+
+// Function to handle the expansion
+function expandArticle(postElement) {
+    // 1. Get the visual properties of the card we clicked
+    const rect = postElement.getBoundingClientRect();
+    const titleText = postElement.querySelector('h2').innerText;
+    const dateText = postElement.querySelector('.date').innerText;
+
+    // 2. Set the content
+    articleTitleContainer.innerText = titleText;
+    articleDateContainer.innerText = dateText;
+
+    // 3. Pause background scrolling
+    lenis.stop();
+    document.body.style.overflow = 'hidden';
+
+    // 4. Reset states for the overlay container and content
+    gsap.set(articleOverlay, { opacity: 1, visibility: 'visible' });
+    gsap.set(articleContent, { display: 'block', opacity: 0, y: 50 });
+
+    // 5. Morph the glass background from the exact size and position of the card
+    gsap.set(articleGlassBg, {
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+        borderRadius: "20px"
+    });
+
+    // 6. Animate to full viewport with fluid motion and enhanced refraction logic
+    const tl = gsap.timeline();
+
+    // Morph background
+    tl.to(articleGlassBg, {
+        top: 0,
+        left: 0,
+        width: "100vw",
+        height: "100vh",
+        borderRadius: "0px",
+        duration: 0.8,
+        ease: "power3.inOut"
+    });
+
+    // Fade and slide in the newspaper content
+    tl.to(articleContent, {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        ease: "power2.out"
+    }, "-=0.3"); // Overlap slightly to make it feel connected
+}
+
+// Function to handle the close transition
+function closeArticle() {
+    const tl = gsap.timeline({
+        onComplete: () => {
+            gsap.set(articleOverlay, { opacity: 0, visibility: 'hidden' });
+            gsap.set(articleContent, { display: 'none' });
+            lenis.start();
+            document.body.style.overflow = '';
+        }
+    });
+
+    tl.to(articleContent, {
+        opacity: 0,
+        y: 30,
+        duration: 0.4,
+        ease: "power2.in"
+    });
+
+    // Fade the glass out gently
+    tl.to(articleGlassBg, {
+        opacity: 0,
+        duration: 0.5,
+        ease: "power2.inOut"
+    }, "-=0.2");
+
+    // Reset glass opacity for next time
+    tl.set(articleGlassBg, { opacity: 1 });
+}
+
+// Attach event listeners
+document.querySelectorAll('.post .btn-standard').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+        const postElement = e.target.closest('.post');
+        if (postElement) {
+            expandArticle(postElement);
+        }
+    });
+});
+
+closeArticleBtn.addEventListener('click', closeArticle);

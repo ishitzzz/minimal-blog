@@ -2,20 +2,24 @@
    USER CONTROLS: Adjust these variables to customize spacing and text sizing
    ========================================================================= */
 :root {
-    /* 1. Header/Logo Gap from the Top Screen Edge
-       Increase this value (e.g., 80px, 120px) to push the title further down. */
+    /* 1. Header/Logo Vertical Position
+       Increase this value to push the title further down.
+       Decrease this value to move the title higher up. */
     --logo-top-offset: 80px;
     --logo-top-offset-mobile: 100px;
 
-    /* 2. Card Gap from the Top Header
-       Increase this value (e.g., 180px) to push the cards further down.
-       Decrease this value (e.g., 60px) to pull the cards higher up. */
-    --card-top-offset: 80px;
-
-    /* 3. Header LOGO (Tactile.) Size across devices */
-    --logo-size-desktop: 5.5rem;
-    --logo-size-tablet: 4.5rem;
+    /* 2. Header LOGO Size across devices
+       Increase or decrease these values to resize the logo across screens. */
+    --logo-size-desktop: 7.5rem;
+    --logo-size-tablet: 5.5rem;
     --logo-size-mobile: 3.5rem;
+
+    /* 3. Card Stack Vertical Position
+       Adjust both variables to move the entire stack UP or DOWN.
+       To push the stack DOWN towards bottom: Increase top-offset, Decrease bottom-offset
+       To pull the stack UP towards logo: Decrease top-offset, Increase bottom-offset */
+    --card-top-offset: 0px;
+    --card-bottom-offset: 140px;
 }
 
 /* Reset and Base Styles */
@@ -141,7 +145,7 @@ a {
     /* Absolute positioning handled by GSAP pinning */
     position: absolute !important;
     top: var(--card-top-offset);
-    bottom: 0;
+    bottom: var(--card-bottom-offset);
     left: 0;
     right: 0;
     margin: auto;
@@ -165,7 +169,7 @@ a {
     position: absolute;
     right: 40px;
     top: var(--card-top-offset);
-    bottom: 0;
+    bottom: var(--card-bottom-offset);
     margin: auto;
     height: fit-content;
     z-index: 100;
@@ -353,6 +357,145 @@ a {
 }
 
 /* =========================================
+   Expanded Glass Overlay & Newspaper Layout
+   ========================================= */
+
+.article-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* Hide scrollbars during animation but let it scroll otherwise */
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 0;
+    /* Use padding later when scrolling */
+}
+
+/* 1. Lensing and Refraction + Dynamic Adaptation */
+.article-glass-bg {
+    position: fixed;
+    /* GSAP will control top/left/width/height and border-radius to morph from the card */
+    z-index: 2001;
+    cursor: default;
+
+    /* More aggressive liquid glass settings when expanded */
+    background: linear-gradient(135deg, rgba(240, 240, 240, 0.65) 0%, rgba(255, 255, 255, 0.3) 100%);
+    backdrop-filter: blur(20px) saturate(120%) brightness(1.1) contrast(0.9);
+    -webkit-backdrop-filter: blur(20px) saturate(120%) brightness(1.1) contrast(0.9);
+
+    /* Liquid edges */
+    box-shadow:
+        0 25px 80px rgba(0, 0, 0, 0.15),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.4),
+        inset 0 4px 18px rgba(255, 255, 255, 0.7);
+
+    /* Fluid Transition Smoothing on filter */
+    transition: backdrop-filter 0.5s ease;
+    will-change: transform, width, height, border-radius;
+}
+
+/* 2. Newspaper Layout */
+.article-content {
+    position: relative;
+    z-index: 2002;
+    width: 100%;
+    max-width: 900px;
+    padding: 100px 40px;
+    opacity: 0;
+    display: none;
+    /* Block when active */
+    color: #111;
+}
+
+.newspaper-layout .close-article {
+    position: sticky;
+    top: 30px;
+    margin-bottom: 2rem;
+    display: flex;
+    gap: 8px;
+    z-index: 2005;
+}
+
+.newspaper-layout .article-header {
+    text-align: center;
+    border-top: 2px solid rgba(0, 0, 0, 0.8);
+    border-bottom: 2px solid rgba(0, 0, 0, 0.8);
+    padding: 30px 0;
+    margin-bottom: 50px;
+    position: relative;
+}
+
+/* Vintage decoration lines */
+.newspaper-layout .article-header::before,
+.newspaper-layout .article-header::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.newspaper-layout .article-header::before {
+    top: 4px;
+}
+
+.newspaper-layout .article-header::after {
+    bottom: 4px;
+}
+
+.newspaper-layout .article-date {
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.newspaper-layout .article-title {
+    font-size: 3.5rem;
+    font-weight: 400;
+    line-height: 1.1;
+    text-transform: uppercase;
+    letter-spacing: -1px;
+    text-shadow: 0 4px 12px rgba(255, 255, 255, 0.8);
+}
+
+.newspaper-layout .article-body {
+    column-count: 2;
+    column-gap: 60px;
+    column-rule: 1px solid rgba(0, 0, 0, 0.1);
+    font-size: 1.15rem;
+    line-height: 1.8;
+    text-align: justify;
+    text-shadow: 0 2px 5px rgba(255, 255, 255, 0.6);
+}
+
+.newspaper-layout .article-body p {
+    margin-bottom: 1.5rem;
+    break-inside: avoid;
+}
+
+/* Drop Cap for newspaper feel */
+.newspaper-layout .drop-cap {
+    float: left;
+    font-size: 5rem;
+    line-height: 0.8;
+    margin-right: 12px;
+    margin-top: 4px;
+    color: #000;
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* =========================================
    Mobile Responsiveness
    ========================================= */
 
@@ -408,6 +551,20 @@ a {
     .site-footer {
         bottom: 10px;
         font-size: 0.8rem;
+    }
+
+    /* Newspaper Layout Mobile adjustments */
+    .newspaper-layout .article-title {
+        font-size: 2.2rem;
+    }
+
+    .newspaper-layout .article-body {
+        column-count: 1;
+        /* Turn off columns on mobile */
+    }
+
+    .newspaper-layout .article-content {
+        padding: 80px 20px;
     }
 }
 
