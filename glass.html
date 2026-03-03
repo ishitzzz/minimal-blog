@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic 3D Liquid Glass</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/Draggable.min.js"></script>
+    <style>
+        :root {
+            --glass-size-w: 270px;
+            --glass-size-h: 270px;
+            --glass-padding: 30px;
+            --border-radius: 32px;
+            --transition: 0.4s cubic-bezier(0.5, 1.5, 0.5, 1);
+
+            --menu-gap: 16px;
+            --icon-size: 64px;
+            --icon-border-radius: 16px;
+            --icon-padding: 12px;
+
+            --blur-radius: 8px;
+            --blur-vibrancy: 150%;
+
+            --card-tint: rgba(255, 255, 255, 0.05);
+            --bevel-light: rgba(255, 255, 255, 0.7);
+            --bevel-shadow: rgba(0, 0, 0, 0.4);
+            --drop-shadow-depth: 40px;
+            --drop-shadow-color: rgba(0, 0, 0, 0.4);
+
+            /* Changed to pure numbers for CSS calc() math */
+            --mouse-x: 50;
+            --mouse-y: 50;
+            --glare-opacity: 0.3;
+
+            /* DYNAMIC LIGHTING MATH ENGINE */
+            /* Inverts the 0-100 mouse position into a -8px to +8px shadow offset */
+            --light-x: calc((50 - var(--mouse-x)) / 50 * 8px);
+            --light-y: calc((50 - var(--mouse-y)) / 50 * 8px);
+            --shadow-x: calc((var(--mouse-x) - 50) / 50 * 8px);
+            --shadow-y: calc((var(--mouse-y) - 50) / 50 * 8px);
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            min-width: 100vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: url('background.jpg') center / cover no-repeat fixed;
+            background-color: #111;
+            overflow: hidden;
+        }
+
+        /* --- THE CONTROL PANEL --- */
+        .controls-panel {
+            position: fixed;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 320px;
+            background: rgba(15, 15, 15, 0.85);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 24px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            z-index: 100;
+            color: #fff;
+            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .controls-panel h2 {
+            font-size: 0.75rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0 0 20px 0;
+            border-bottom: 1px solid #333;
+            padding-bottom: 8px;
+        }
+
+        .ctrl-group {
+            margin-bottom: 20px;
+        }
+
+        .ctrl-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            color: #ccc;
+        }
+
+        .val {
+            font-family: monospace;
+            color: #00d2ff;
+            font-size: 0.8rem;
+        }
+
+        input[type=range] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            appearance: none;
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 0 10px rgba(0, 210, 255, 0.5);
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 2px;
+        }
+
+        /* --- THE GLASS CONTAINER --- */
+        .liquid-glass {
+            width: var(--glass-size-w);
+            height: var(--glass-size-h);
+            padding: var(--glass-padding);
+            border-radius: var(--border-radius);
+            position: relative;
+            cursor: grab;
+            transition: width var(--transition), height var(--transition), padding var(--transition);
+            box-sizing: border-box;
+            /* Made the drop shadow slightly dynamic as well */
+            box-shadow: calc(var(--shadow-x) * 2) calc(20px + var(--shadow-y) * 2) var(--drop-shadow-depth) var(--drop-shadow-color);
+        }
+
+        .liquid-glass.is-expanded {
+            --glass-size-w: 550px;
+            --glass-size-h: 700px;
+            --glass-padding: 40px;
+            --menu-gap: 32px;
+            cursor: default;
+        }
+
+        /* LAYER 1: RYAN YU'S OPTICS ENGINE */
+        .liquid-glass--bend {
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
+            -webkit-backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
+            filter: url(#glass-blur);
+            z-index: 1;
+            clip-path: inset(0 round var(--border-radius));
+            transition: border-radius var(--transition), clip-path var(--transition);
+        }
+
+        /* LAYER 2: DYNAMIC CLAYMORPHIC VOLUME */
+        .liquid-glass--volume {
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: var(--card-tint);
+            /* The X and Y coordinates are now wired directly to the mouse percentages */
+            box-shadow:
+                inset var(--light-x) var(--light-y) 10px 0 var(--bevel-light),
+                inset calc(var(--light-x) / 4) calc(var(--light-y) / 4) 2px 0 rgba(255, 255, 255, 0.9),
+                inset var(--shadow-x) var(--shadow-y) 10px 0 var(--bevel-shadow),
+                inset calc(var(--shadow-x) / 4) calc(var(--shadow-y) / 4) 2px 0 rgba(0, 0, 0, 0.6);
+            z-index: 2;
+            pointer-events: none;
+            transition: border-radius var(--transition);
+        }
+
+        /* LAYER 3: DYNAMIC GLARE */
+        .liquid-glass--glare {
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            /* Appending % back onto the pure numbers for the gradient position */
+            background: radial-gradient(800px circle at calc(var(--mouse-x) * 1%) calc(var(--mouse-y) * 1%),
+                    rgba(255, 255, 255, var(--glare-opacity)),
+                    transparent 40%);
+            z-index: 3;
+            pointer-events: none;
+            transition: border-radius var(--transition);
+        }
+
+        /* LAYER 4: CONTENT */
+        .liquid-glass__menus {
+            position: relative;
+            z-index: 4;
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--menu-gap);
+            transition: gap var(--transition);
+        }
+
+        .liquid-glass__link {
+            width: var(--icon-size);
+            height: var(--icon-size);
+            padding: var(--icon-padding);
+            border-radius: var(--icon-border-radius);
+            /* Softened icon bevels */
+            box-shadow: inset 1px 1px 2px 0 rgba(255, 255, 255, 0.5), inset -1px -1px 2px 0 rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            transition: all var(--transition);
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .liquid-glass.is-expanded .liquid-glass__link {
+            --icon-size: 128px;
+            --icon-border-radius: 32px;
+            --icon-padding: 24px;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+
+        .liquid-glass__link svg {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .link-1 {
+            background: linear-gradient(135deg, rgba(26, 118, 173, 0.8), rgba(40, 142, 201, 0.8));
+        }
+
+        .link-2 {
+            background: linear-gradient(135deg, rgba(168, 45, 251, 0.8), rgba(207, 132, 252, 0.8));
+        }
+
+        .hint {
+            position: fixed;
+            bottom: 30px;
+            left: calc(50% - 160px);
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            pointer-events: none;
+            transform: translateX(-50%);
+        }
+    </style>
+</head>
+
+<body>
+
+    <svg style="position: absolute; left: -9999px; pointer-events: none;" xmlns="http://www.w3.org/2000/svg">
+        <filter id="glass-blur" x="-20%" y="-20%" width="140%" height="140%" filterUnits="objectBoundingBox">
+            <feTurbulence id="svg-turb" type="fractalNoise" baseFrequency="0.003 0.007" numOctaves="1"
+                result="turbulence" />
+            <feDisplacementMap id="svg-disp" in="SourceGraphic" in2="turbulence" scale="150" xChannelSelector="R"
+                yChannelSelector="G" />
+        </filter>
+    </svg>
+
+    <div class="liquid-glass" id="glass-card">
+        <div class="liquid-glass--bend"></div>
+        <div class="liquid-glass--volume"></div>
+        <div class="liquid-glass--glare"></div>
+
+        <div class="liquid-glass__menus">
+            <a class="liquid-glass__link link-1" href="#" target="_blank">
+                <svg viewBox="0 0 24 24" fill="white">
+                    <path d="M12 2L2 22h20L12 2z" />
+                </svg>
+            </a>
+            <a class="liquid-glass__link link-2" href="#" target="_blank">
+                <svg viewBox="0 0 24 24" fill="white">
+                    <circle cx="12" cy="12" r="10" />
+                </svg>
+            </a>
+        </div>
+    </div>
+
+    <div class="hint">Click to expand • Drag to move</div>
+
+    <aside class="controls-panel">
+        <h2>Optics (Ryan Yu Refraction)</h2>
+        <div class="ctrl-group">
+            <div class="ctrl-header"><label>Refraction Warp (Scale)</label><span class="val" id="v-ref">150</span></div>
+            <input type="range" id="c-ref" min="0" max="300" value="150">
+        </div>
+        <div class="ctrl-group">
+            <div class="ctrl-header"><label>Liquid Oiliness (Freq)</label><span class="val" id="v-disp">30%</span></div>
+            <input type="range" id="c-disp" min="1" max="100" value="30">
+        </div>
+
+        <h2>Material (Frosting)</h2>
+        <div class="ctrl-group">
+            <div class="ctrl-header"><label>Blur Radius</label><span class="val" id="v-blur">8px</span></div>
+            <input type="range" id="c-blur" min="0" max="40" value="8">
+        </div>
+        <div class="ctrl-group">
+            <div class="ctrl-header"><label>Vibrancy (Saturation)</label><span class="val" id="v-vib">150%</span></div>
+            <input type="range" id="c-vib" min="100" max="300" value="150">
+        </div>
+        <div class="ctrl-group">
+            <div class="ctrl-header"><label>Base Tint (Opacity)</label><span class="val" id="v-tint">5%</span></div>
+            <input type="range" id="c-tint" min="0" max="50" value="5">
+        </div>
+
+        <h2>Claymorphism (Volume)</h2>
+        <div class="ctrl-group">
+            <div class="ctrl-header"><label>Bevel Light Intensity</label><span class="val" id="v-light">70%</span></div>
+            <input type="range" id="c-light" min="0" max="100" value="70">
+        </div>
+        <div class="ctrl-group">
+            <div class="ctrl-header"><label>Bevel Shadow Intensity</label><span class="val" id="v-shadow">40%</span>
+            </div>
+            <input type="range" id="c-shadow" min="0" max="100" value="40">
+        </div>
+        <div class="ctrl-group">
+            <div class="ctrl-header"><label>Drop Shadow Depth</label><span class="val" id="v-drop">40px</span></div>
+            <input type="range" id="c-drop" min="0" max="100" value="40">
+        </div>
+        <div class="ctrl-group">
+            <div class="ctrl-header"><label>Specular Glare (Mouse)</label><span class="val" id="v-glare">30%</span>
+            </div>
+            <input type="range" id="c-glare" min="0" max="100" value="30">
+        </div>
+    </aside>
+
+    <script>
+        const root = document.documentElement;
+        const card = document.getElementById('glass-card');
+
+        // Centralized function to calculate the light source relative to the card
+        function updateLighting(clientX, clientY) {
+            const rect = card.getBoundingClientRect();
+            // Maps the cursor position to a 0 to 100 number inside the card bounds
+            let x = ((clientX - rect.left) / rect.width) * 100;
+            let y = ((clientY - rect.top) / rect.height) * 100;
+
+            // Push pure numbers to CSS for the dynamic bevel calc() engine
+            root.style.setProperty('--mouse-x', x);
+            root.style.setProperty('--mouse-y', y);
+        }
+
+        // --- GLOBAL MOUSE TRACKING ---
+        // Attached to the window so the light direction shifts even if the mouse leaves the card
+        window.addEventListener('mousemove', (e) => {
+            updateLighting(e.clientX, e.clientY);
+        });
+
+        // --- GSAP DRAG & DROP & EXPAND ---
+        gsap.registerPlugin(Draggable);
+        Draggable.create(".liquid-glass", {
+            type: "x, y", inertia: true,
+            onDrag: function () {
+                // Keep the light source updated relative to the cursor while dragging
+                updateLighting(this.pointerX, this.pointerY);
+            },
+            onRelease: function () {
+                gsap.to(this.target, { x: 0, y: 0, duration: 1.5, ease: "elastic.out(1,0.3)" });
+            }
+        });
+
+        card.addEventListener("click", (e) => {
+            if (e.target.closest(".liquid-glass__link")) return;
+            e.currentTarget.classList.toggle("is-expanded");
+        });
+
+        // --- SLIDER CONTROLS LOGIC ---
+        const svgDisp = document.getElementById('svg-disp');
+        const svgTurb = document.getElementById('svg-turb');
+
+        document.getElementById('c-ref').addEventListener('input', e => {
+            svgDisp.setAttribute('scale', e.target.value);
+            document.getElementById('v-ref').innerText = e.target.value;
+        });
+
+        document.getElementById('c-disp').addEventListener('input', e => {
+            const base = e.target.value * 0.0001;
+            svgTurb.setAttribute('baseFrequency', `${base} ${base * 2.33}`);
+            document.getElementById('v-disp').innerText = `${e.target.value}%`;
+        });
+
+        const updateVar = (inputId, varName, valId, unit, divideBy = 1, prefix = '') => {
+            document.getElementById(inputId).addEventListener('input', e => {
+                const val = e.target.value / divideBy;
+                root.style.setProperty(varName, `${prefix}${val}${unit}`);
+                document.getElementById(valId).innerText = `${e.target.value}${unit}`;
+            });
+        };
+
+        updateVar('c-blur', '--blur-radius', 'v-blur', 'px');
+        updateVar('c-vib', '--blur-vibrancy', 'v-vib', '%');
+
+        document.getElementById('c-tint').addEventListener('input', e => {
+            root.style.setProperty('--card-tint', `rgba(255, 255, 255, ${e.target.value / 100})`);
+            document.getElementById('v-tint').innerText = `${e.target.value}%`;
+        });
+
+        document.getElementById('c-light').addEventListener('input', e => {
+            root.style.setProperty('--bevel-light', `rgba(255, 255, 255, ${e.target.value / 100})`);
+            document.getElementById('v-light').innerText = `${e.target.value}%`;
+        });
+
+        document.getElementById('c-shadow').addEventListener('input', e => {
+            root.style.setProperty('--bevel-shadow', `rgba(0, 0, 0, ${e.target.value / 100})`);
+            document.getElementById('v-shadow').innerText = `${e.target.value}%`;
+        });
+
+        updateVar('c-drop', '--drop-shadow-depth', 'v-drop', 'px');
+
+        document.getElementById('c-glare').addEventListener('input', e => {
+            root.style.setProperty('--glare-opacity', e.target.value / 100);
+            document.getElementById('v-glare').innerText = `${e.target.value}%`;
+        });
+
+    </script>
+</body>
+
+</html>

@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="style.css">
 
-    <!-- Dependencies: GSAP for smooth morphing animations, Lucide for sleek icons -->
+    <!-- Dependencies: GSAP for animations, Lucide for icons -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
     <!-- Lenis for smooth scrolling -->
@@ -21,8 +21,22 @@
 </head>
 
 <body>
+    <!-- SVG REFRACTION FILTER — the "Ryan Yu Optics Engine"
+         feTurbulence creates organic noise, feDisplacementMap warps the image through it -->
+    <svg style="position: absolute; left: -9999px; pointer-events: none;" xmlns="http://www.w3.org/2000/svg">
+        <filter id="glass-blur" x="-20%" y="-20%" width="140%" height="140%" filterUnits="objectBoundingBox">
+            <feTurbulence id="svg-turb" type="fractalNoise" baseFrequency="0.003 0.007" numOctaves="1"
+                result="turbulence" />
+            <feDisplacementMap id="svg-disp" in="SourceGraphic" in2="turbulence" scale="150" xChannelSelector="R"
+                yChannelSelector="G" />
+        </filter>
+    </svg>
+
     <!-- Background Texture -->
     <div class="bg-texture"></div>
+
+    <!-- Expand Overlay: fades in behind expanding card -->
+    <div class="expand-overlay" id="expand-overlay"></div>
 
     <!-- Header Section -->
     <header class="site-header">
@@ -36,78 +50,105 @@
 
     <!-- The Pinned Section containing the cards -->
     <main class="sticky-card-section">
-        <article class="post glassy-effect">
+        <article class="post glassy-effect" data-card-index="0" data-story="art-of-digital-paper">
+            <div class="glass-bend"></div>
+            <div class="glass-volume"></div>
+            <div class="glass-glare"></div>
             <p class="date">October 24, 2026</p>
             <h2>The Art of Digital Paper</h2>
             <p class="excerpt">Exploring the intersection of physical textures and virtual interfaces. How WebGL shaders
                 can breathe life into flat screens by generating procedural grain, fibers, and subtle ambient lighting
                 variations.</p>
-            <button class="btn-standard glassy-effect">Read Story</button>
+            <button class="btn-standard glassy-effect" data-action="read-story">Read Story</button>
         </article>
 
-        <article class="post glassy-effect">
+        <article class="post glassy-effect" data-card-index="1" data-story="liquid-interfaces">
+            <div class="glass-bend"></div>
+            <div class="glass-volume"></div>
+            <div class="glass-glare"></div>
             <p class="date">October 20, 2026</p>
             <h2>Liquid Interfaces</h2>
             <p class="excerpt">Moving beyond rigid boxes. Designing elements that feel like viscous fluids and heavy,
                 refractive glass. A deep dive into using CSS backdrop-filters and sophisticated shadowing techniques to
                 emulate volume.</p>
-            <button class="btn-standard glassy-effect">Read Story</button>
+            <button class="btn-standard glassy-effect" data-action="read-story">Read Story</button>
         </article>
 
-        <article class="post glassy-effect">
+        <article class="post glassy-effect" data-card-index="2" data-story="typography-as-texture">
+            <div class="glass-bend"></div>
+            <div class="glass-volume"></div>
+            <div class="glass-glare"></div>
             <p class="date">September 12, 2026</p>
             <h2>Typography as Texture</h2>
             <p class="excerpt">A monospaced homage. Why typewriter fonts like Special Elite bring a necessary friction
                 back to hyper-polished digital environments.</p>
-            <button class="btn-standard glassy-effect">Read Story</button>
+            <button class="btn-standard glassy-effect" data-action="read-story">Read Story</button>
         </article>
 
-        <article class="post glassy-effect">
+        <article class="post glassy-effect" data-card-index="3" data-story="depth-in-flatness">
+            <div class="glass-bend"></div>
+            <div class="glass-volume"></div>
+            <div class="glass-glare"></div>
             <p class="date">August 05, 2026</p>
             <h2>Depth in Flatness</h2>
             <p class="excerpt">Creating an illusion of space along the Z-axis without relying on overt realism. Finding
                 the balance between minimalism and tactile physics in UI.</p>
-            <button class="btn-standard glassy-effect">Read Story</button>
+            <button class="btn-standard glassy-effect" data-action="read-story">Read Story</button>
         </article>
 
-        <article class="post glassy-effect">
+        <article class="post glassy-effect" data-card-index="4" data-story="the-new-skeuomorphism">
+            <div class="glass-bend"></div>
+            <div class="glass-volume"></div>
+            <div class="glass-glare"></div>
             <p class="date">July 22, 2026</p>
             <h2>The New Skeuomorphism</h2>
             <p class="excerpt">Why early iOS design principles are returning to modern interfaces, bringing back
                 shadows, textures, and physical affordances.</p>
-            <button class="btn-standard glassy-effect">Read Story</button>
+            <button class="btn-standard glassy-effect" data-action="read-story">Read Story</button>
         </article>
 
-        <article class="post glassy-effect">
+        <article class="post glassy-effect" data-card-index="5" data-story="kinetic-typography">
+            <div class="glass-bend"></div>
+            <div class="glass-volume"></div>
+            <div class="glass-glare"></div>
             <p class="date">June 14, 2026</p>
             <h2>Kinetic Typography</h2>
             <p class="excerpt">Animating words to behave like physical objects. Gravity, friction, and tension as
                 applied to digital typefaces.</p>
-            <button class="btn-standard glassy-effect">Read Story</button>
+            <button class="btn-standard glassy-effect" data-action="read-story">Read Story</button>
         </article>
 
-        <article class="post glassy-effect">
+        <article class="post glassy-effect" data-card-index="6" data-story="minimalist-color-theory">
+            <div class="glass-bend"></div>
+            <div class="glass-volume"></div>
+            <div class="glass-glare"></div>
             <p class="date">May 09, 2026</p>
             <h2>Minimalist Color Theory</h2>
             <p class="excerpt">Relying on stark contrast and highly selective palettes to define spaces normally
                 delineated by borders and bounds.</p>
-            <button class="btn-standard glassy-effect">Read Story</button>
+            <button class="btn-standard glassy-effect" data-action="read-story">Read Story</button>
         </article>
 
-        <article class="post glassy-effect">
+        <article class="post glassy-effect" data-card-index="7" data-story="tactile-feedback">
+            <div class="glass-bend"></div>
+            <div class="glass-volume"></div>
+            <div class="glass-glare"></div>
             <p class="date">April 02, 2026</p>
             <h2>Tactile Feedback</h2>
             <p class="excerpt">How haptic responses and micro-animations bridge the gap between touching glass and
                 feeling a button click.</p>
-            <button class="btn-standard glassy-effect">Read Story</button>
+            <button class="btn-standard glassy-effect" data-action="read-story">Read Story</button>
         </article>
 
-        <article class="post glassy-effect">
+        <article class="post glassy-effect" data-card-index="8" data-story="designing-the-unseen">
+            <div class="glass-bend"></div>
+            <div class="glass-volume"></div>
+            <div class="glass-glare"></div>
             <p class="date">March 18, 2026</p>
             <h2>Designing the Unseen</h2>
             <p class="excerpt">The negative space that forms the foundation of all premium interfaces. Letting the
                 design breathe to highlight the content.</p>
-            <button class="btn-standard glassy-effect">Read Story</button>
+            <button class="btn-standard glassy-effect" data-action="read-story">Read Story</button>
         </article>
     </main>
 
@@ -115,8 +156,6 @@
     <footer class="site-footer">
         <p>&copy; 2026 Tactile Blog. All rights reserved.</p>
     </footer>
-
-
 
     <script src="app.js"></script>
 </body>

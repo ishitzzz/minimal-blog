@@ -2,24 +2,71 @@
    USER CONTROLS: Adjust these variables to customize spacing and text sizing
    ========================================================================= */
 :root {
-    /* 1. Header/Logo Vertical Position
-       Increase this value to push the title further down.
-       Decrease this value to move the title higher up. */
+    /* =============================================
+       1. HEADER / LOGO CONTROLS
+       ============================================= */
+    /* Logo vertical position from top edge */
     --logo-top-offset: 80px;
     --logo-top-offset-mobile: 100px;
 
-    /* 2. Header LOGO Size across devices
-       Increase or decrease these values to resize the logo across screens. */
+    /* Logo size across devices */
     --logo-size-desktop: 7.5rem;
     --logo-size-tablet: 5.5rem;
     --logo-size-mobile: 3.5rem;
 
-    /* 3. Card Stack Vertical Position
-       Adjust both variables to move the entire stack UP or DOWN.
-       To push the stack DOWN towards bottom: Increase top-offset, Decrease bottom-offset
-       To pull the stack UP towards logo: Decrease top-offset, Increase bottom-offset */
+    /* =============================================
+       2. CARD STACK POSITION CONTROLS
+       ============================================= */
     --card-top-offset: 0px;
     --card-bottom-offset: 140px;
+
+    /* =============================================
+       3. LIQUID GLASS MATERIAL CONTROLS
+       4-Layer Optics Engine (from glass.html):
+       Layer 1: SVG Refraction Bend
+       Layer 2: Claymorphic Volume (dynamic bevels)
+       Layer 3: Specular Glare (mouse-tracked)
+       Layer 4: Content
+       ============================================= */
+
+    /* --- LAYER 1: OPTICS (Refraction) --- */
+    /* Blur Radius: backdrop blur in px (0 = crystal clear, 40 = heavy frost) */
+    --blur-radius: 8px;
+    /* Vibrancy: saturation multiplier through the glass (100% = normal, 300% = vivid) */
+    --blur-vibrancy: 150%;
+    /* Refraction Warp: SVG displacement map scale (0 = none, 300 = extreme warp) */
+    --refraction-warp: 150;
+    /* Liquid Oiliness: feTurbulence frequency (1 = fine grain, 100 = coarse oil) */
+    --liquid-oiliness: 30;
+
+    /* --- LAYER 2: CLAYMORPHIC VOLUME --- */
+    /* Card Tint: background fill rgba */
+    --card-tint: rgba(255, 255, 255, 0.05);
+    /* Bevel Light: highlight color on the light-facing edges */
+    --bevel-light: rgba(255, 255, 255, 0.7);
+    /* Bevel Shadow: shadow color on the opposite edges */
+    --bevel-shadow: rgba(0, 0, 0, 0.4);
+    /* Drop Shadow Depth: outer shadow blur in px */
+    --drop-shadow-depth: 40px;
+    /* Drop Shadow Color */
+    --drop-shadow-color: rgba(0, 0, 0, 0.3);
+
+    /* --- LAYER 3: SPECULAR GLARE --- */
+    /* Glare Opacity: mouse-tracked spotlight intensity (0 = none, 1 = bright) */
+    --glare-opacity: 0.3;
+
+    /* --- DYNAMIC LIGHTING ENGINE --- */
+    /* These are updated by JavaScript based on cursor position (pure numbers 0-100) */
+    --mouse-x: 50;
+    --mouse-y: 50;
+    /* Computed light/shadow offsets from mouse position */
+    --light-x: calc((50 - var(--mouse-x)) / 50 * 8px);
+    --light-y: calc((50 - var(--mouse-y)) / 50 * 8px);
+    --shadow-x: calc((var(--mouse-x) - 50) / 50 * 8px);
+    --shadow-y: calc((var(--mouse-y) - 50) / 50 * 8px);
+
+    /* --- GENERAL CARD STYLING --- */
+    --glass-radius: 36px;
 }
 
 /* Reset and Base Styles */
@@ -56,6 +103,17 @@ body {
 a {
     text-decoration: none;
     color: inherit;
+}
+
+/* WebGL Canvas Container */
+#webgl-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+    pointer-events: none;
 }
 
 /* Background Image */
@@ -138,9 +196,14 @@ a {
     transform-style: preserve-3d;
 }
 
+/* =========================================================================
+   REFRACTIVE LIQUID GLASS - Card Material
+   ========================================================================= */
 .post {
     padding: 45px 40px;
-    border-radius: 20px;
+
+    /* Surface Tension Edges: Rounded lip giving organic weight */
+    border-radius: 24px;
 
     /* Absolute positioning handled by GSAP pinning */
     position: absolute !important;
@@ -157,9 +220,159 @@ a {
     flex-direction: column;
     justify-content: center;
 
-    /* Origin at bottom allows it to pivot up and flip back natively */
+    /* GPU Layer Promotion: Forces own compositor layer */
+    transform: translateZ(0);
     transform-origin: bottom center;
-    will-change: transform, filter, opacity;
+    will-change: transform, opacity;
+
+    /* Contain paint to prevent layout thrashing during animations */
+    contain: layout style;
+}
+
+/* =========================================================================
+   4-LAYER LIQUID GLASS OPTICS ENGINE
+   Layer 1: SVG Refraction Bend (backdrop-filter + SVG displacement)
+   Layer 2: Claymorphic Volume (dynamic mouse-tracked bevels)
+   Layer 3: Specular Glare (radial gradient follows cursor)
+   Layer 4: Content
+   ========================================================================= */
+
+/* The .glassy-effect container just holds the layers + establishes size */
+.glassy-effect {
+    border-radius: var(--glass-radius);
+    position: relative;
+    overflow: visible;
+    /* allow layers to breathe */
+    /* Dynamic drop shadow that shifts with light direction */
+    box-shadow: calc(var(--shadow-x) * 2) calc(20px + var(--shadow-y) * 2) var(--drop-shadow-depth) var(--drop-shadow-color);
+    border: none;
+    background: transparent;
+}
+
+/* LAYER 1: OPTICS BEND — SVG refraction warp + frosted backdrop */
+.post .glass-bend {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
+    -webkit-backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
+    filter: url(#glass-blur);
+    z-index: 1;
+    clip-path: inset(0 round var(--glass-radius));
+    pointer-events: none;
+}
+
+/* LAYER 2: CLAYMORPHIC VOLUME — dynamic mouse-tracked bevels */
+.post .glass-volume {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--card-tint);
+    /* Dynamic inset shadows wired to mouse position for 3D clay feel */
+    box-shadow:
+        inset var(--light-x) var(--light-y) 10px 0 var(--bevel-light),
+        inset calc(var(--light-x) / 4) calc(var(--light-y) / 4) 2px 0 rgba(255, 255, 255, 0.9),
+        inset var(--shadow-x) var(--shadow-y) 10px 0 var(--bevel-shadow),
+        inset calc(var(--shadow-x) / 4) calc(var(--shadow-y) / 4) 2px 0 rgba(0, 0, 0, 0.6);
+    z-index: 2;
+    pointer-events: none;
+}
+
+/* LAYER 3: SPECULAR GLARE — follows cursor */
+.post .glass-glare {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(800px circle at calc(var(--mouse-x) * 1%) calc(var(--mouse-y) * 1%),
+            rgba(255, 255, 255, var(--glare-opacity)),
+            transparent 40%);
+    z-index: 3;
+    pointer-events: none;
+}
+
+/* Content layer: sits above all glass layers */
+.post .date,
+.post h2,
+.post .excerpt,
+.post .btn-standard {
+    position: relative;
+    z-index: 4;
+}
+
+/* =========================================================================
+   CARD EXPAND ANIMATION — morphs card to full-screen on "Read Story" click
+   ========================================================================= */
+.post.is-expanding {
+    /* Override GSAP transforms during expansion */
+    position: fixed !important;
+    z-index: 9999 !important;
+    margin: 0 !important;
+    transition: top 0.6s cubic-bezier(0.4, 0, 0, 1),
+        left 0.6s cubic-bezier(0.4, 0, 0, 1),
+        width 0.6s cubic-bezier(0.4, 0, 0, 1),
+        height 0.6s cubic-bezier(0.4, 0, 0, 1),
+        border-radius 0.6s cubic-bezier(0.4, 0, 0, 1),
+        opacity 0.3s ease;
+}
+
+.post.is-expanding.full-screen {
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: none !important;
+    border-radius: 0 !important;
+}
+
+/* Overlay that fades in behind the expanding card */
+.expand-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 9998;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+}
+
+.expand-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* =========================================================================
+   INTERNAL SUSPENSION (Oil Float) - Text elements float independently
+   ========================================================================= */
+.post .date,
+.post h2,
+.post .excerpt,
+.post .btn-standard {
+    /* Each element gets its own layer for independent parallax */
+    transform: translateZ(0);
+    will-change: transform, opacity;
+}
+
+/* Staggered suspension weights: heavier text settles slower (more lag) */
+.post .date {
+    --float-mass: 0.15;
+    --float-delay: 0ms;
+}
+
+.post h2 {
+    --float-mass: 0.25;
+    --float-delay: 30ms;
+}
+
+.post .excerpt {
+    --float-mass: 0.35;
+    --float-delay: 60ms;
+}
+
+.post .btn-standard {
+    --float-mass: 0.20;
+    --float-delay: 90ms;
 }
 
 /* ------------------------------------
@@ -261,7 +474,6 @@ a {
     text-transform: uppercase;
     letter-spacing: 1px;
     text-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
-    /* Stronger shadow */
 }
 
 .post h2 {
@@ -270,7 +482,6 @@ a {
     font-weight: normal;
     line-height: 1.2;
     text-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-    /* Stronger shadow */
 }
 
 .excerpt {
@@ -279,7 +490,6 @@ a {
     color: #222;
     margin-bottom: 30px;
     text-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
-    /* Stronger shadow */
 }
 
 .site-footer {
@@ -294,38 +504,7 @@ a {
     pointer-events: none;
 }
 
-/* Liquid Metal / Glassy Morphing Global Class */
-.glassy-effect {
-    /* Multi-layered transparent gradient */
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.0) 100%);
-
-    /* Fine subtle border */
-    border: 1px solid rgba(255, 255, 255, 0.2);
-
-    /* Liquid edge shine: Thick white inset shadows and outer drop shadows */
-    box-shadow:
-        0 25px 50px rgba(0, 0, 0, 0.08),
-        /* Deep outer drop shadow */
-        0 8px 24px rgba(0, 0, 0, 0.04),
-        /* Medium outer shadow */
-        0 0 0 1px rgba(255, 255, 255, 0.3),
-        /* Faint glowing outer halo */
-        inset 0 0 0 2px rgba(255, 255, 255, 0.5),
-        /* Sharp inner white rim light */
-        inset 0 6px 18px rgba(255, 255, 255, 0.8),
-        /* Thick, diffuse top gloss */
-        inset 0 -6px 18px rgba(255, 255, 255, 0.4),
-        /* Diffuse bottom reflection */
-        inset 0 -2px 6px rgba(0, 0, 0, 0.05);
-    /* Subtle dark inner bottom ground */
-
-    position: relative;
-    overflow: hidden;
-}
-
-/* Shimmer reflection removed as requested */
-
-/* Standard Buttons */
+/* Standard Buttons - Liquid Glass Pill */
 .btn-standard {
     padding: 12px 28px;
     font-size: 1.05rem;
@@ -339,7 +518,7 @@ a {
     justify-content: center;
     outline: none;
     align-self: flex-start;
-    /* Faint shadow on text for depth, as requested */
+    /* Faint shadow on text for depth */
     text-shadow: 0 4px 8px rgba(0, 0, 0, 0.18);
     transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease;
 }
