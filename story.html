@@ -10,24 +10,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
 
     <style>
-        :root {
-            /* Glass Controls — same as main page */
-            --blur-radius: 8px;
-            --blur-vibrancy: 150%;
-            --card-tint: rgba(255, 255, 255, 0.05);
-            --bevel-light: rgba(255, 255, 255, 0.7);
-            --bevel-shadow: rgba(0, 0, 0, 0.4);
-            --glare-opacity: 0.15;
-            --glass-radius: 36px;
-
-            --mouse-x: 50;
-            --mouse-y: 50;
-            --light-x: calc((50 - var(--mouse-x)) / 50 * 8px);
-            --light-y: calc((50 - var(--mouse-y)) / 50 * 8px);
-            --shadow-x: calc((var(--mouse-x) - 50) / 50 * 8px);
-            --shadow-y: calc((var(--mouse-y) - 50) / 50 * 8px);
-        }
-
         * {
             margin: 0;
             padding: 0;
@@ -53,77 +35,16 @@
             }
         }
 
-        /* SVG Filter for refraction */
-        .svg-filters {
-            position: absolute;
-            left: -9999px;
-            pointer-events: none;
-        }
-
-        /* Glass content area */
-        .story-glass {
+        /* Content area — clean, no glass */
+        .story-container {
             position: relative;
             min-height: 100vh;
             padding: 80px 60px;
-            max-width: 900px;
+            max-width: 800px;
             margin: 0 auto;
         }
 
-        /* Layer 1: Optics Bend */
-        .story-glass .glass-bend {
-            position: fixed;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: min(900px, 100vw);
-            height: 100vh;
-            backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
-            -webkit-backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
-            filter: url(#story-glass-blur);
-            z-index: 1;
-            pointer-events: none;
-        }
-
-        /* Layer 2: Volume */
-        .story-glass .glass-volume {
-            position: fixed;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: min(900px, 100vw);
-            height: 100vh;
-            background: var(--card-tint);
-            box-shadow:
-                inset var(--light-x) var(--light-y) 10px 0 var(--bevel-light),
-                inset calc(var(--light-x) / 4) calc(var(--light-y) / 4) 2px 0 rgba(255, 255, 255, 0.9),
-                inset var(--shadow-x) var(--shadow-y) 10px 0 var(--bevel-shadow),
-                inset calc(var(--shadow-x) / 4) calc(var(--shadow-y) / 4) 2px 0 rgba(0, 0, 0, 0.6);
-            z-index: 2;
-            pointer-events: none;
-        }
-
-        /* Layer 3: Glare */
-        .story-glass .glass-glare {
-            position: fixed;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: min(900px, 100vw);
-            height: 100vh;
-            background: radial-gradient(800px circle at calc(var(--mouse-x) * 1%) calc(var(--mouse-y) * 1%),
-                    rgba(255, 255, 255, var(--glare-opacity)),
-                    transparent 40%);
-            z-index: 3;
-            pointer-events: none;
-        }
-
-        /* Content layer */
-        .story-content {
-            position: relative;
-            z-index: 4;
-        }
-
-        /* Back button */
+        /* Back button — glass pill style */
         .back-btn {
             display: inline-flex;
             align-items: center;
@@ -140,6 +61,7 @@
             cursor: pointer;
             margin-bottom: 40px;
             transition: transform 0.2s ease, background 0.2s ease;
+            text-decoration: none;
         }
 
         .back-btn:hover {
@@ -209,7 +131,7 @@
         }
 
         @media (max-width: 768px) {
-            .story-glass {
+            .story-container {
                 padding: 40px 24px;
             }
 
@@ -225,59 +147,31 @@
 </head>
 
 <body>
-    <!-- SVG Refraction Filter -->
-    <svg class="svg-filters" xmlns="http://www.w3.org/2000/svg">
-        <filter id="story-glass-blur" x="-20%" y="-20%" width="140%" height="140%" filterUnits="objectBoundingBox">
-            <feTurbulence type="fractalNoise" baseFrequency="0.003 0.007" numOctaves="1" result="turbulence" />
-            <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="100" xChannelSelector="R"
-                yChannelSelector="G" />
-        </filter>
-    </svg>
+    <div class="story-container">
+        <a class="back-btn" href="index.html">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m15 18-6-6 6-6" />
+            </svg>
+            Back
+        </a>
 
-    <div class="story-glass">
-        <!-- 3 Glass Layers -->
-        <div class="glass-bend"></div>
-        <div class="glass-volume"></div>
-        <div class="glass-glare"></div>
+        <p class="story-date" id="story-date">Loading...</p>
+        <h1 class="story-title" id="story-title">Loading...</h1>
+        <hr class="story-divider">
 
-        <!-- Content -->
-        <div class="story-content">
-            <button class="back-btn" onclick="window.location.href='index.html'">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="m15 18-6-6 6-6" />
-                </svg>
-                Back
-            </button>
+        <div class="story-body" id="story-body">
+            <p>Loading story content...</p>
+        </div>
 
-            <p class="story-date" id="story-date">Loading...</p>
-            <h1 class="story-title" id="story-title">Loading...</h1>
-            <hr class="story-divider">
-
-            <div class="story-body" id="story-body">
-                <p>Loading story content...</p>
-            </div>
-
-            <div class="story-footer">
-                <p>&copy; 2026 Tactile Blog. All rights reserved.</p>
-            </div>
+        <div class="story-footer">
+            <p>&copy; 2026 Tactile Blog. All rights reserved.</p>
         </div>
     </div>
 
     <script>
         // =========================================================================
-        //  DYNAMIC LIGHTING — same as main page
-        // =========================================================================
-        const root = document.documentElement;
-        window.addEventListener('mousemove', (e) => {
-            const x = (e.clientX / window.innerWidth) * 100;
-            const y = (e.clientY / window.innerHeight) * 100;
-            root.style.setProperty('--mouse-x', x);
-            root.style.setProperty('--mouse-y', y);
-        });
-
-        // =========================================================================
-        //  STORY DATA — loaded from URL slug parameter
+        //  STORY DATA
         // =========================================================================
         const stories = {
             'art-of-digital-paper': {
@@ -356,9 +250,7 @@
             }
         };
 
-        // =========================================================================
-        //  LOAD STORY CONTENT FROM URL
-        // =========================================================================
+        // Load story from URL
         const params = new URLSearchParams(window.location.search);
         const slug = params.get('slug');
 

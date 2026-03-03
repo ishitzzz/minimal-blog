@@ -212,7 +212,6 @@ a {
     left: 0;
     right: 0;
     margin: auto;
-    /* Corrects centering */
     width: 80vw;
     max-width: 850px;
     height: fit-content;
@@ -223,30 +222,44 @@ a {
     /* GPU Layer Promotion: Forces own compositor layer */
     transform: translateZ(0);
     transform-origin: bottom center;
-    will-change: transform, opacity;
+    will-change: transform, opacity, filter;
+
+    /* Smooth blur transitions on stacked cards instead of snapping */
+    transition: filter 0.2s ease-out;
 
     /* Contain paint to prevent layout thrashing during animations */
     contain: layout style;
 }
 
 /* =========================================================================
-   4-LAYER LIQUID GLASS OPTICS ENGINE
-   Layer 1: SVG Refraction Bend (backdrop-filter + SVG displacement)
-   Layer 2: Claymorphic Volume (dynamic mouse-tracked bevels)
-   Layer 3: Specular Glare (radial gradient follows cursor)
-   Layer 4: Content
+   4-LAYER LIQUID GLASS OPTICS ENGINE (Performance-Optimized)
+   
+   BROWSER RENDERING PIPELINE:
+   1. Style Recalc → Layout → Paint → Composite
+   
+   Our optimization strategy:
+   - will-change: tells browser to pre-promote elements to GPU layers
+   - contain: layout style paint → prevents child changes from invalidating parent layout
+   - transform: translateZ(0) → forces GPU compositing layer
+   - transition on box-shadow → smooths repaints across frames instead of snapping
+   
+   Safari-specific: -webkit-backdrop-filter + clip-path combo is slow.
+   We use will-change: backdrop-filter to hint Safari to cache the filter result.
    ========================================================================= */
 
-/* The .glassy-effect container just holds the layers + establishes size */
+/* The .glassy-effect container */
 .glassy-effect {
     border-radius: var(--glass-radius);
     position: relative;
     overflow: visible;
-    /* allow layers to breathe */
     /* Dynamic drop shadow that shifts with light direction */
     box-shadow: calc(var(--shadow-x) * 2) calc(20px + var(--shadow-y) * 2) var(--drop-shadow-depth) var(--drop-shadow-color);
     border: none;
     background: transparent;
+    /* Smooth the box-shadow transition instead of snapping every frame */
+    transition: box-shadow 0.15s ease-out;
+    /* Promote to own compositing layer */
+    transform: translateZ(0);
 }
 
 /* LAYER 1: OPTICS BEND — SVG refraction warp + frosted backdrop */
@@ -260,6 +273,10 @@ a {
     z-index: 1;
     clip-path: inset(0 round var(--glass-radius));
     pointer-events: none;
+    /* GPU hints for expensive backdrop-filter (especially important for Safari) */
+    will-change: backdrop-filter;
+    contain: strict;
+    transform: translateZ(0);
 }
 
 /* LAYER 2: CLAYMORPHIC VOLUME — dynamic mouse-tracked bevels */
@@ -268,7 +285,6 @@ a {
     inset: 0;
     border-radius: inherit;
     background: var(--card-tint);
-    /* Dynamic inset shadows wired to mouse position for 3D clay feel */
     box-shadow:
         inset var(--light-x) var(--light-y) 10px 0 var(--bevel-light),
         inset calc(var(--light-x) / 4) calc(var(--light-y) / 4) 2px 0 rgba(255, 255, 255, 0.9),
@@ -276,6 +292,15 @@ a {
         inset calc(var(--shadow-x) / 4) calc(var(--shadow-y) / 4) 2px 0 rgba(0, 0, 0, 0.6);
     z-index: 2;
     pointer-events: none;
+    /* Smooth the bevel shadow movement — this is the KEY performance trick.
+       Instead of CSS recalculating and painting sharp new shadows every frame,
+       transition: smooths them over 150ms. At 60fps, this means each frame only
+       needs a partial repaint. The human eye can't tell the difference, but
+       the GPU can breathe. */
+    transition: box-shadow 0.15s ease-out;
+    will-change: box-shadow;
+    contain: layout style;
+    transform: translateZ(0);
 }
 
 /* LAYER 3: SPECULAR GLARE — follows cursor */
@@ -288,6 +313,11 @@ a {
             transparent 40%);
     z-index: 3;
     pointer-events: none;
+    /* Radial gradients are GPU-painted. Transition smooths the position change. */
+    transition: background 0.15s ease-out;
+    will-change: background;
+    contain: layout style;
+    transform: translateZ(0);
 }
 
 /* Content layer: sits above all glass layers */
@@ -300,47 +330,9 @@ a {
 }
 
 /* =========================================================================
-   CARD EXPAND ANIMATION — morphs card to full-screen on "Read Story" click
+   CARD EXPAND — GSAP handles all animation. CSS just provides base state.
+   No overlay, no darkening. Text fades out, glass fills viewport smoothly.
    ========================================================================= */
-.post.is-expanding {
-    /* Override GSAP transforms during expansion */
-    position: fixed !important;
-    z-index: 9999 !important;
-    margin: 0 !important;
-    transition: top 0.6s cubic-bezier(0.4, 0, 0, 1),
-        left 0.6s cubic-bezier(0.4, 0, 0, 1),
-        width 0.6s cubic-bezier(0.4, 0, 0, 1),
-        height 0.6s cubic-bezier(0.4, 0, 0, 1),
-        border-radius 0.6s cubic-bezier(0.4, 0, 0, 1),
-        opacity 0.3s ease;
-}
-
-.post.is-expanding.full-screen {
-    top: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    max-width: none !important;
-    border-radius: 0 !important;
-}
-
-/* Overlay that fades in behind the expanding card */
-.expand-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    z-index: 9998;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.4s ease;
-}
-
-.expand-overlay.active {
-    opacity: 1;
-    pointer-events: auto;
-}
 
 /* =========================================================================
    INTERNAL SUSPENSION (Oil Float) - Text elements float independently

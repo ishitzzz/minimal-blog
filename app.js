@@ -1,7 +1,7 @@
 // =========================================================================
 //  TACTILE BLOG — 4-Layer Liquid Glass Optics Engine
 //  Architecture: SVG Refraction + CSS Claymorphism + GSAP Spring Physics
-//  No WebGL — pure CSS/SVG for maximum compatibility
+//  Performance: RAF-throttled updates, selective filtering, compositor-first
 // =========================================================================
 
 // Initialize Lucide Icons
@@ -17,98 +17,148 @@ const lenis = new Lenis({
     easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
 });
 
-function raf(time) {
-    lenis.raf(time);
-    requestAnimationFrame(raf);
-}
-requestAnimationFrame(raf);
-
 // =========================================================================
 //  2. CARD STACK CONFIGURATION
 // =========================================================================
 const cards = document.querySelectorAll('.post');
 const totalCards = cards.length;
 
-// ==========================================
-// CONTROLS FOR CARD PEEL OFF EFFECT
-// ==========================================
-const yOffset = 50;         // Pixels each subsequent card drops down initially
-const scaleOffset = 0.08;   // Controls how much smaller background cards are
-const blurMultiplier = 10;  // Controls blur on stacked cards
-// ==========================================
+const yOffset = 50;
+const scaleOffset = 0.08;
+const blurMultiplier = 10;
 
 // =========================================================================
-//  3. DYNAMIC LIGHTING ENGINE — Mouse-tracked 3D bevels
-//     Updates CSS custom properties for the claymorphic volume layer
+//  PERFORMANCE: Pre-cache everything to avoid DOM queries in hot loops
 // =========================================================================
-const root = document.documentElement;
+const cardInnerElements = new Map();
+const cardFloatMasses = new Map();
 
-function updateLighting(clientX, clientY) {
-    // Map cursor position relative to the viewport center to 0-100 range
-    const x = (clientX / window.innerWidth) * 100;
-    const y = (clientY / window.innerHeight) * 100;
-    root.style.setProperty('--mouse-x', x);
-    root.style.setProperty('--mouse-y', y);
-}
-
-window.addEventListener('mousemove', (e) => {
-    updateLighting(e.clientX, e.clientY);
+cards.forEach(card => {
+    const els = card.querySelectorAll('.date, h2, .excerpt, .btn-standard');
+    cardInnerElements.set(card, els);
+    const masses = [];
+    els.forEach(el => {
+        masses.push(parseFloat(getComputedStyle(el).getPropertyValue('--float-mass')) || 0.2);
+    });
+    cardFloatMasses.set(card, masses);
 });
 
+let viewH = window.innerHeight;
+let viewW = window.innerWidth;
+
 // =========================================================================
-//  4. SVG REFRACTION SYNC — Wire CSS variables to SVG filter attributes
-//     This bridges the CSS control panel to the SVG feTurbulence/feDisplacementMap
+//  3. DYNAMIC LIGHTING — Lerp-smoothed, RAF-throttled
+//     Mouse position is accumulated and applied once per frame via lerp
+// =========================================================================
+const root = document.documentElement;
+let mouseTarget = { x: 50, y: 50 };
+let mouseCurrent = { x: 50, y: 50 };
+const MOUSE_LERP = 0.1;
+
+window.addEventListener('mousemove', (e) => {
+    mouseTarget.x = (e.clientX / viewW) * 100;
+    mouseTarget.y = (e.clientY / viewH) * 100;
+}, { passive: true });
+
+function tickMouse() {
+    const dx = mouseTarget.x - mouseCurrent.x;
+    const dy = mouseTarget.y - mouseCurrent.y;
+    if (Math.abs(dx) < 0.05 && Math.abs(dy) < 0.05) return;
+
+    mouseCurrent.x += dx * MOUSE_LERP;
+    mouseCurrent.y += dy * MOUSE_LERP;
+    root.style.setProperty('--mouse-x', mouseCurrent.x);
+    root.style.setProperty('--mouse-y', mouseCurrent.y);
+}
+
+// =========================================================================
+//  4. SVG REFRACTION — Synced once on load (expensive, don't call per-frame)
 // =========================================================================
 const svgDisp = document.getElementById('svg-disp');
 const svgTurb = document.getElementById('svg-turb');
 
-function syncSVGFilter() {
+(function syncSVGFilter() {
     const styles = getComputedStyle(root);
     const warp = parseFloat(styles.getPropertyValue('--refraction-warp')) || 150;
     const oiliness = parseFloat(styles.getPropertyValue('--liquid-oiliness')) || 30;
-
     if (svgDisp) svgDisp.setAttribute('scale', warp);
     if (svgTurb) {
         const base = oiliness * 0.0001;
         svgTurb.setAttribute('baseFrequency', `${base} ${base * 2.33}`);
     }
+})();
+
+// =========================================================================
+//  5. SVG FILTER PERFORMANCE MANAGEMENT
+//     feTurbulence is CPU-computed and catastrophically expensive.
+//     Strategy: Only apply SVG filter to the ACTIVE card, and disable during scroll.
+// =========================================================================
+let isScrolling = false;
+let scrollTimer = null;
+let lastActiveCardForFilter = null;
+
+function enableSVGFilter(card) {
+    if (lastActiveCardForFilter === card) return;
+    // Remove from previous
+    if (lastActiveCardForFilter) {
+        const bend = lastActiveCardForFilter.querySelector('.glass-bend');
+        if (bend) bend.style.filter = 'none';
+    }
+    // Apply to new active card (only when not scrolling)
+    if (!isScrolling && card) {
+        const bend = card.querySelector('.glass-bend');
+        if (bend) bend.style.filter = '';  // revert to CSS default (url(#glass-blur))
+    }
+    lastActiveCardForFilter = card;
 }
 
-// Sync on load
-syncSVGFilter();
-
-// =========================================================================
-//  5. INTERNAL SUSPENSION: "Oil Float" Parallax
-//     Text elements drift independently with different mass/friction
-// =========================================================================
-function updateOilFloat(card, segmentProgress, isPeelingAway) {
-    const innerElements = card.querySelectorAll('.date, h2, .excerpt, .btn-standard');
-
-    innerElements.forEach((el, i) => {
-        const mass = parseFloat(getComputedStyle(el).getPropertyValue('--float-mass')) || 0.2;
-
-        if (isPeelingAway) {
-            const lag = segmentProgress * mass * 40;
-            const drift = segmentProgress * mass * -8;
-            gsap.set(el, {
-                y: -lag,
-                x: drift,
-                opacity: gsap.utils.interpolate(1, 0, segmentProgress * (1 + mass)),
-                force3D: true
-            });
-        } else {
-            gsap.set(el, {
-                y: 0,
-                x: 0,
-                opacity: 1,
-                force3D: true
-            });
-        }
+function disableAllSVGFilters() {
+    cards.forEach(card => {
+        const bend = card.querySelector('.glass-bend');
+        if (bend) bend.style.filter = 'none';
     });
 }
 
+function onScrollStart() {
+    if (!isScrolling) {
+        isScrolling = true;
+        disableAllSVGFilters();  // Kill SVG filter during scroll for smooth 60fps
+    }
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+        isScrolling = false;
+        // Re-enable SVG filter on the active card after scroll settles
+        if (lastActiveCardForFilter) {
+            enableSVGFilter(lastActiveCardForFilter);
+        }
+    }, 200);
+}
+
 // =========================================================================
-//  6. LIQUID GLASS ROTARY DIAL PAGINATION
+//  6. OIL FLOAT PARALLAX (cached, no getComputedStyle in hot path)
+// =========================================================================
+function updateOilFloat(card, segmentProgress, isPeelingAway) {
+    const els = cardInnerElements.get(card);
+    const masses = cardFloatMasses.get(card);
+    if (!els || !masses) return;
+
+    for (let i = 0; i < els.length; i++) {
+        if (isPeelingAway) {
+            const m = masses[i];
+            gsap.set(els[i], {
+                y: -(segmentProgress * m * 40),
+                x: segmentProgress * m * -8,
+                opacity: gsap.utils.interpolate(1, 0, segmentProgress * (1 + m)),
+                force3D: true
+            });
+        } else {
+            gsap.set(els[i], { y: 0, x: 0, opacity: 1, force3D: true });
+        }
+    }
+}
+
+// =========================================================================
+//  7. ROTARY DIAL PAGINATION
 // =========================================================================
 const dialContainer = document.createElement('div');
 dialContainer.className = 'card-dial';
@@ -141,9 +191,10 @@ document.querySelector('.sticky-card-section').appendChild(dialContainer);
 const dots = document.querySelectorAll('.dial-dot');
 
 // =========================================================================
-//  7. RENDER STACK: Core animation loop with Spring Physics
+//  8. RENDER STACK — Core animation loop
+//     Dirty-tracking prevents redundant style mutations
 // =========================================================================
-const bgTexture = document.querySelector('.bg-texture');
+const lastBlur = new Map();
 
 function renderStack(virtualProgress) {
     let activeIndex = Math.floor(virtualProgress);
@@ -151,101 +202,80 @@ function renderStack(virtualProgress) {
     const segmentProgress = virtualProgress - activeIndex;
 
     cards.forEach((card, index) => {
-        // ---- STATE 1: PAST CARDS (peeled away) ----
         if (index < activeIndex) {
+            // PAST: off-screen
             gsap.set(card, {
-                y: -window.innerHeight * 1.5,
-                rotationX: 75,
-                scale: 1,
-                opacity: 0,
-                force3D: true
+                y: -viewH * 1.5, rotationX: 75, scale: 1, opacity: 0, force3D: true
             });
-            card.style.filter = '';
+            if (lastBlur.get(index) !== 0) {
+                card.style.filter = ''; lastBlur.set(index, 0);
+            }
             updateOilFloat(card, 1, true);
         }
-        // ---- STATE 2: CURRENT ANIMATING CARD (Elastic Blooming Physics) ----
         else if (index === activeIndex) {
-            const easedProgress = gsap.parseEase("power2.in")(segmentProgress);
-
-            const currentY = gsap.utils.interpolate(0, -window.innerHeight * 1.5, easedProgress);
-            const currentRotX = gsap.utils.interpolate(0, 75, easedProgress);
-
-            const opacityEase = gsap.parseEase("power3.out")(segmentProgress);
-            const currentOpacity = gsap.utils.interpolate(1, 0, opacityEase);
-
+            // ACTIVE: peeling off
+            const eased = gsap.parseEase("power2.in")(segmentProgress);
+            const opEase = gsap.parseEase("power3.out")(segmentProgress);
             gsap.set(card, {
-                y: currentY,
-                rotationX: currentRotX,
+                y: gsap.utils.interpolate(0, -viewH * 1.5, eased),
+                rotationX: gsap.utils.interpolate(0, 75, eased),
                 scale: 1,
-                opacity: currentOpacity,
+                opacity: gsap.utils.interpolate(1, 0, opEase),
                 force3D: true
             });
-
-            card.style.filter = '';
-
-            // Oil Float: internal elements drift with mass-based lag
+            if (lastBlur.get(index) !== 0) {
+                card.style.filter = ''; lastBlur.set(index, 0);
+            }
             updateOilFloat(card, segmentProgress, true);
+            enableSVGFilter(card);
         }
-        // ---- STATE 3: FUTURE CARDS (Stacked, with selective blur) ----
         else {
-            const behindIndex = index - activeIndex;
-            const offsetProgress = behindIndex - segmentProgress;
-
-            const targetY = offsetProgress * yOffset;
-            const targetScale = 1 - (offsetProgress * scaleOffset);
-
+            // STACKED: behind active
+            const behind = index - activeIndex;
+            const off = behind - segmentProgress;
             gsap.set(card, {
-                y: targetY,
+                y: off * yOffset,
                 rotationX: 0,
-                scale: targetScale,
+                scale: 1 - (off * scaleOffset),
                 opacity: 1,
                 force3D: true
             });
 
-            // Selective Filtering: blur stacked cards behind the active one
-            if (behindIndex <= 2) {
-                const blurAmount = gsap.utils.clamp(0, 20, offsetProgress * blurMultiplier);
-                card.style.filter = `blur(${blurAmount}px)`;
-            } else {
-                card.style.filter = `blur(20px)`;
-            }
+            const blur = behind <= 2
+                ? Math.round(gsap.utils.clamp(0, 20, off * blurMultiplier))
+                : 20;
 
+            if (lastBlur.get(index) !== blur) {
+                card.style.filter = blur > 0 ? `blur(${blur}px)` : '';
+                lastBlur.set(index, blur);
+            }
             updateOilFloat(card, 0, false);
         }
     });
 
-    // Update the pagination dial
+    // Dial pagination
     gsap.set(dialTrack, { y: -virtualProgress * 30 });
-
-    dots.forEach((dot, index) => {
-        const dist = Math.abs(index - virtualProgress);
-        let scale = 0, opacity = 0;
-
-        if (dist < 0.1) {
-            scale = 1.3;
-            opacity = 1;
-        } else if (dist <= 1.5) {
-            scale = gsap.utils.mapRange(0.1, 1.5, 1.0, 0.4, dist);
-            opacity = gsap.utils.mapRange(0.1, 1.5, 0.7, 0.1, dist);
-        } else {
-            scale = 0;
-            opacity = 0;
+    dots.forEach((dot, i) => {
+        const dist = Math.abs(i - virtualProgress);
+        let s = 0, o = 0;
+        if (dist < 0.1) { s = 1.3; o = 1; }
+        else if (dist <= 1.5) {
+            s = gsap.utils.mapRange(0.1, 1.5, 1.0, 0.4, dist);
+            o = gsap.utils.mapRange(0.1, 1.5, 0.7, 0.1, dist);
         }
-
-        gsap.to(dot, { scale: scale, opacity: opacity, duration: 0.2, overwrite: "auto" });
+        gsap.to(dot, { scale: s, opacity: o, duration: 0.2, overwrite: "auto" });
     });
 }
 
-// Initial full render
 renderStack(0);
 
 // =========================================================================
-//  8. SCROLL-DRIVEN ANIMATION (Buttery Smooth Scrub + Snap)
+//  9. SCROLL-DRIVEN ANIMATION
 // =========================================================================
 let st = ScrollTrigger.create({
     trigger: '.sticky-card-section',
     start: 'top top',
-    end: () => `+=${window.innerHeight * 0.4 * totalCards}`,
+    end: () => `+=${viewH * 0.4 * totalCards}`,
     pin: true,
     scrub: 0.5,
     snap: {
@@ -255,36 +285,31 @@ let st = ScrollTrigger.create({
         ease: "elastic.out(1, 0.4)"
     },
     onUpdate: (self) => {
-        const progress = self.progress * (totalCards - 1);
-        renderStack(progress);
+        onScrollStart();
+        renderStack(self.progress * (totalCards - 1));
     }
 });
 
 // =========================================================================
-//  9. ARROW CLICK HANDLERS
+// 10. ARROW CLICK HANDLERS
 // =========================================================================
 upArrow.addEventListener('click', () => {
     if (!st) return;
-    let currentProgress = st.progress * (totalCards - 1);
-    let targetIndex = Math.max(Math.round(currentProgress) - 1, 0);
-    let targetScroll = st.start + (targetIndex / (totalCards - 1)) * (st.end - st.start);
-    lenis.scrollTo(targetScroll, { duration: 1.2, lock: false });
+    const ci = Math.max(Math.round(st.progress * (totalCards - 1)) - 1, 0);
+    lenis.scrollTo(st.start + (ci / (totalCards - 1)) * (st.end - st.start), { duration: 1.2 });
 });
-
 downArrow.addEventListener('click', () => {
     if (!st) return;
-    let currentProgress = st.progress * (totalCards - 1);
-    let targetIndex = Math.min(Math.round(currentProgress) + 1, totalCards - 1);
-    let targetScroll = st.start + (targetIndex / (totalCards - 1)) * (st.end - st.start);
-    lenis.scrollTo(targetScroll, { duration: 1.2, lock: false });
+    const ci = Math.min(Math.round(st.progress * (totalCards - 1)) + 1, totalCards - 1);
+    lenis.scrollTo(st.start + (ci / (totalCards - 1)) * (st.end - st.start), { duration: 1.2 });
 });
 
 // =========================================================================
-// 10. CARD EXPAND → STORY PAGE TRANSITION
-//     Clicking "Read Story" morphs the card to full-screen, then navigates
+// 11. CARD EXPAND → STORY PAGE TRANSITION
+//     - Smooth & slow glass expansion (no darkening)
+//     - Text content fades out, only the glass expands
+//     - After full coverage, navigate to story page
 // =========================================================================
-const expandOverlay = document.getElementById('expand-overlay');
-
 document.querySelectorAll('[data-action="read-story"]').forEach(btn => {
     btn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -294,61 +319,84 @@ document.querySelectorAll('[data-action="read-story"]').forEach(btn => {
         const storySlug = card.dataset.story;
         if (!storySlug) return;
 
-        // Capture card's current position
         const rect = card.getBoundingClientRect();
 
-        // Disable scrolling during transition
+        // Freeze scrolling
         lenis.stop();
 
-        // Remove GSAP inline transforms and fix position
-        gsap.killTweensOf(card);
-        card.style.cssText = '';
-        card.style.position = 'fixed';
-        card.style.top = rect.top + 'px';
-        card.style.left = rect.left + 'px';
-        card.style.width = rect.width + 'px';
-        card.style.height = rect.height + 'px';
-        card.style.zIndex = '9999';
-        card.style.margin = '0';
-        card.style.transform = 'none';
-        card.style.borderRadius = 'var(--glass-radius)';
+        // Fade out text content first
+        const textEls = card.querySelectorAll('.date, h2, .excerpt, .btn-standard');
+        gsap.to(textEls, {
+            opacity: 0,
+            y: -20,
+            duration: 0.3,
+            stagger: 0.03,
+            ease: "power2.in"
+        });
 
-        // Show backdrop overlay
-        expandOverlay.classList.add('active');
+        // After text fades, expand the glass card
+        gsap.delayedCall(0.25, () => {
+            // Kill scroll transforms and fix position
+            gsap.killTweensOf(card);
 
-        // Force reflow
-        card.offsetHeight;
+            // Copy current visual position to fixed coordinates
+            card.style.position = 'fixed';
+            card.style.top = rect.top + 'px';
+            card.style.left = rect.left + 'px';
+            card.style.width = rect.width + 'px';
+            card.style.height = rect.height + 'px';
+            card.style.zIndex = '9999';
+            card.style.margin = '0';
+            card.style.transform = 'none';
+            card.style.maxWidth = 'none';
+            card.style.bottom = 'auto';
+            card.style.right = 'auto';
+            card.style.transition = 'none';
+            card.style.contain = 'none';
 
-        // Add transition class and trigger full-screen morph
-        card.classList.add('is-expanding');
-
-        requestAnimationFrame(() => {
-            card.classList.add('full-screen');
-
-            // After the morph animation completes, navigate to story page
-            card.addEventListener('transitionend', function onEnd(evt) {
-                if (evt.propertyName !== 'width') return;
-                card.removeEventListener('transitionend', onEnd);
-
-                // Navigate with a slight fade
-                document.body.style.opacity = '0';
-                document.body.style.transition = 'opacity 0.2s ease';
-
-                setTimeout(() => {
-                    window.location.href = `story.html?slug=${storySlug}`;
-                }, 200);
+            // Smooth GSAP expansion to fill viewport
+            gsap.to(card, {
+                top: 0,
+                left: 0,
+                width: '100vw',
+                height: '100vh',
+                borderRadius: 0,
+                duration: 0.8,
+                ease: "power3.inOut",
+                onComplete: () => {
+                    // Brief pause then navigate
+                    gsap.to(card, {
+                        opacity: 0,
+                        duration: 0.25,
+                        onComplete: () => {
+                            window.location.href = `story.html?slug=${storySlug}`;
+                        }
+                    });
+                }
             });
         });
     });
 });
 
 // =========================================================================
-// 11. RESIZE HANDLER
+// 12. UNIFIED RAF LOOP
 // =========================================================================
-let resizeTimeout;
+function mainLoop(time) {
+    lenis.raf(time);
+    tickMouse();
+    requestAnimationFrame(mainLoop);
+}
+requestAnimationFrame(mainLoop);
+
+// =========================================================================
+// 13. RESIZE
+// =========================================================================
+let resizeTimer;
 window.addEventListener('resize', () => {
-    clearTimeout(resizeTimeout);
-    resizeTimeout = setTimeout(() => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+        viewH = window.innerHeight;
+        viewW = window.innerWidth;
         ScrollTrigger.refresh();
     }, 250);
-});
+}, { passive: true });
