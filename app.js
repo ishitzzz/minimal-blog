@@ -569,6 +569,7 @@ downArrow.addEventListener('click', () => {
 // =========================================================================
 const expansionPhantom = document.getElementById('expansion-phantom');
 const stickySection = document.querySelector('.sticky-card-section');
+const siteHeader = document.querySelector('.site-header');
 
 document.querySelectorAll('[data-action="read-story"]').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -585,6 +586,14 @@ document.querySelectorAll('[data-action="read-story"]').forEach(btn => {
 
         // Freeze scrolling
         lenis.stop();
+
+        // CHROME FIX: Switch header from position:fixed to position:absolute.
+        // backdrop-filter can't sample sibling position:fixed elements in Chrome.
+        // Making the header absolute lets the phantom's glass refract the "Tactile." text.
+        if (siteHeader) {
+            siteHeader.style.position = 'absolute';
+            siteHeader.style.top = (window.scrollY + parseFloat(getComputedStyle(siteHeader).top)) + 'px';
+        }
 
         // Store which card was clicked (for reverse animation on return)
         sessionStorage.setItem('expanding-card-index', cardIndex);
