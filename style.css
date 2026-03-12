@@ -377,17 +377,20 @@ a {
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
 }
 
-/* Frosted glass layer — backdrop-filter only, NO SVG feTurbulence */
+/* Frosted glass layer WITH oily refraction.
+   Safe because: (1) turbulence is pre-rendered as static texture (Canvas2D),
+   (2) the card stack is hidden during expansion so only this one element
+   has the filter, (3) feDisplacementMap + static feImage is GPU-friendly. */
 .expansion-phantom .glass-bend {
     position: absolute;
     inset: 0;
     border-radius: inherit;
     backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
     -webkit-backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
-    /* NO filter: url(#glass-blur) — that's the expensive SVG part */
+    filter: url(#glass-blur);
     z-index: 1;
     pointer-events: none;
-    will-change: backdrop-filter;
+    will-change: backdrop-filter, filter;
     contain: strict;
 }
 
