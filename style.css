@@ -378,9 +378,8 @@ a {
 }
 
 /* Frosted glass layer WITH oily refraction.
-   Safe because: (1) turbulence is pre-rendered as static texture (Canvas2D),
-   (2) the card stack is hidden during expansion so only this one element
-   has the filter, (3) feDisplacementMap + static feImage is GPU-friendly. */
+   Uses backdrop-filter for frost + SVG filter for oily displacement.
+   clip-path + translateZ(0) match the real card's glass-bend for proper rendering. */
 .expansion-phantom .glass-bend {
     position: absolute;
     inset: 0;
@@ -388,10 +387,11 @@ a {
     backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
     -webkit-backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
     filter: url(#glass-blur);
+    clip-path: inset(0 round var(--glass-radius));
     z-index: 1;
     pointer-events: none;
     will-change: backdrop-filter, filter;
-    contain: strict;
+    transform: translateZ(0);
 }
 
 /* Claymorphic bevel layer — static bevels (no mouse tracking during expansion) */
@@ -413,10 +413,14 @@ a {
     pointer-events: auto;
 }
 
-/* Hide the card stack during expansion for maximum GPU headroom */
+/* Fade the card stack during expansion. 
+   NOT visibility:hidden — the cards must remain rendered so the phantom's
+   backdrop-filter has content to blur/refract against. The fade makes
+   the phantom glass clearly the dominant visual element. */
 .sticky-card-section.section-hidden {
-    visibility: hidden;
+    opacity: 0.4;
     pointer-events: none;
+    transition: opacity 0.2s ease-out;
 }
 
 /* =========================================================================
