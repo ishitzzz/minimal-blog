@@ -8,8 +8,26 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
+    <!-- GSAP for reverse glass animation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
     <style>
+        :root {
+            --glass-radius: 36px;
+            --blur-radius: 8px;
+            --blur-vibrancy: 150%;
+            --card-tint: rgba(255, 255, 255, 0.05);
+            --bevel-light: rgba(255, 255, 255, 0.7);
+            --bevel-shadow: rgba(0, 0, 0, 0.4);
+            --glare-opacity: 0.15;
+            --mouse-x: 50;
+            --mouse-y: 50;
+            --light-x: calc((50 - var(--mouse-x)) / 50 * 8px);
+            --light-y: calc((50 - var(--mouse-y)) / 50 * 8px);
+            --shadow-x: calc((var(--mouse-x) - 50) / 50 * 8px);
+            --shadow-y: calc((var(--mouse-y) - 50) / 50 * 8px);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -23,16 +41,6 @@
             background: url('background.jpg') center / cover no-repeat fixed;
             background-color: #e8e0d4;
             overflow-x: hidden;
-
-            /* Fade-in on load */
-            opacity: 0;
-            animation: fadeIn 0.5s ease forwards;
-        }
-
-        @keyframes fadeIn {
-            to {
-                opacity: 1;
-            }
         }
 
         /* Content area — clean, no glass */
@@ -44,29 +52,79 @@
             margin: 0 auto;
         }
 
-        /* Back button — glass pill style */
+        /* =========================================================
+           BACK BUTTON — Claymorphic glass pill (matches card style)
+           ========================================================= */
         .back-btn {
+            position: relative;
             display: inline-flex;
             align-items: center;
             gap: 8px;
             font-family: inherit;
             font-size: 1rem;
-            color: #444;
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 30px;
-            padding: 10px 20px;
+            color: #333;
+            background: transparent;
+            border: none;
+            border-radius: 40px;
+            padding: 12px 28px;
             cursor: pointer;
             margin-bottom: 40px;
-            transition: transform 0.2s ease, background 0.2s ease;
             text-decoration: none;
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.18);
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow: hidden;
+        }
+
+        /* Glass bend layer */
+        .back-btn .glass-bend {
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
+            -webkit-backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Glass volume layer - bevels */
+        .back-btn .glass-volume {
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: var(--card-tint);
+            box-shadow:
+                inset var(--light-x) var(--light-y) 6px 0 var(--bevel-light),
+                inset calc(var(--light-x) / 4) calc(var(--light-y) / 4) 1px 0 rgba(255, 255, 255, 0.9),
+                inset var(--shadow-x) var(--shadow-y) 6px 0 var(--bevel-shadow),
+                inset calc(var(--shadow-x) / 4) calc(var(--shadow-y) / 4) 1px 0 rgba(0, 0, 0, 0.5);
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* Glass glare layer */
+        .back-btn .glass-glare {
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: radial-gradient(300px circle at calc(var(--mouse-x) * 1%) calc(var(--mouse-y) * 1%),
+                    rgba(255, 255, 255, var(--glare-opacity)),
+                    transparent 40%);
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        .back-btn span,
+        .back-btn svg {
+            position: relative;
+            z-index: 4;
         }
 
         .back-btn:hover {
             transform: scale(1.05);
-            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .back-btn:active {
+            transform: scale(0.95);
         }
 
         .back-btn svg {
@@ -130,6 +188,34 @@
             font-size: 0.9rem;
         }
 
+        /* =========================================================
+           GLASS OVERLAY — Used for entry/exit transition
+           Full-screen glass that shrinks away to reveal content
+           ========================================================= */
+        .glass-transition-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            pointer-events: none;
+            backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
+            -webkit-backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 0;
+        }
+
+        /* Overlay for back-transition (starts transparent, becomes glass) */
+        .glass-exit-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            pointer-events: none;
+            backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
+            -webkit-backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 0;
+            opacity: 0;
+        }
+
         @media (max-width: 768px) {
             .story-container {
                 padding: 40px 24px;
@@ -147,14 +233,27 @@
 </head>
 
 <body>
+    <!-- SVG Refraction Filter (for entry/exit glass transition) -->
+    <svg style="position: absolute; left: -9999px; pointer-events: none;" xmlns="http://www.w3.org/2000/svg">
+        <filter id="story-glass-blur" x="-20%" y="-20%" width="140%" height="140%" filterUnits="objectBoundingBox">
+            <feTurbulence type="fractalNoise" baseFrequency="0.003 0.007" numOctaves="1" result="turbulence" />
+            <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="100" xChannelSelector="R"
+                yChannelSelector="G" />
+        </filter>
+    </svg>
+
     <div class="story-container">
-        <a class="back-btn" href="index.html">
+        <!-- Glass Back Button (claymorphic, matches card glass style) -->
+        <button class="back-btn" id="back-btn">
+            <div class="glass-bend"></div>
+            <div class="glass-volume"></div>
+            <div class="glass-glare"></div>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="m15 18-6-6 6-6" />
             </svg>
-            Back
-        </a>
+            <span>Back</span>
+        </button>
 
         <p class="story-date" id="story-date">Loading...</p>
         <h1 class="story-title" id="story-title">Loading...</h1>
@@ -170,6 +269,28 @@
     </div>
 
     <script>
+        // =========================================================================
+        //  DYNAMIC LIGHTING — RAF-throttled, lerp-smoothed
+        // =========================================================================
+        const root = document.documentElement;
+        let mouseTarget = { x: 50, y: 50 };
+        let mouseCurrent = { x: 50, y: 50 };
+        const MOUSE_LERP = 0.12;
+
+        window.addEventListener('mousemove', (e) => {
+            mouseTarget.x = (e.clientX / window.innerWidth) * 100;
+            mouseTarget.y = (e.clientY / window.innerHeight) * 100;
+        }, { passive: true });
+
+        function animateLoop() {
+            mouseCurrent.x += (mouseTarget.x - mouseCurrent.x) * MOUSE_LERP;
+            mouseCurrent.y += (mouseTarget.y - mouseCurrent.y) * MOUSE_LERP;
+            root.style.setProperty('--mouse-x', mouseCurrent.x);
+            root.style.setProperty('--mouse-y', mouseCurrent.y);
+            requestAnimationFrame(animateLoop);
+        }
+        requestAnimationFrame(animateLoop);
+
         // =========================================================================
         //  STORY DATA
         // =========================================================================
@@ -250,7 +371,9 @@
             }
         };
 
-        // Load story from URL
+        // =========================================================================
+        //  LOAD STORY CONTENT
+        // =========================================================================
         const params = new URLSearchParams(window.location.search);
         const slug = params.get('slug');
 
@@ -264,6 +387,65 @@
             document.getElementById('story-title').textContent = 'Story Not Found';
             document.getElementById('story-body').innerHTML = '<p>The requested story could not be found. <a href="index.html">Return to home</a>.</p>';
         }
+
+        // =========================================================================
+        //  ENTRY ANIMATION — Glass overlay shrinks away to reveal content
+        //  On page load, if we came from index.html via card expansion,
+        //  show a full-screen glass overlay that fades/shrinks to nothing.
+        // =========================================================================
+        const cameFromCard = sessionStorage.getItem('expanding-card-index');
+        if (cameFromCard !== null) {
+            // Don't clear yet — we need it for the back animation
+            const overlay = document.createElement('div');
+            overlay.classList.add('glass-transition-overlay');
+            overlay.style.filter = 'none';
+            document.body.appendChild(overlay);
+
+            // Animate overlay fading away to reveal the content beneath
+            gsap.to(overlay, {
+                opacity: 0,
+                duration: 0.5,
+                delay: 0.1,
+                ease: "power2.out",
+                onComplete: () => overlay.remove()
+            });
+        }
+
+        // =========================================================================
+        //  BACK BUTTON — Reverse glass expansion animation
+        //  Creates a glass overlay that grows from nothing to cover the viewport,
+        //  then navigates back to index.html with a flag so it plays the shrink.
+        // =========================================================================
+        document.getElementById('back-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+
+            // Create exit glass overlay
+            const overlay = document.createElement('div');
+            overlay.classList.add('glass-exit-overlay');
+            document.body.appendChild(overlay);
+
+            // Fade content out
+            gsap.to('.story-container', {
+                opacity: 0,
+                duration: 0.3,
+                ease: "power2.in"
+            });
+
+            // Glass overlay grows to cover viewport
+            gsap.to(overlay, {
+                opacity: 1,
+                borderRadius: 0,
+                duration: 0.5,
+                delay: 0.1,
+                ease: "power2.inOut",
+                onComplete: () => {
+                    // Set flag so index.html knows to play reverse animation
+                    sessionStorage.setItem('returning-from-story', 'true');
+                    // Navigate back
+                    window.location.href = 'index.html';
+                }
+            });
+        });
     </script>
 </body>
 

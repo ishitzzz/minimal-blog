@@ -4,6 +4,35 @@
 //  Performance: RAF-throttled updates, selective filtering, compositor-first
 // =========================================================================
 
+// =========================================================================
+//  0. RETURNING FROM STORY — Instant full-screen glass overlay
+//     If returning from story page, create a glass overlay covering the
+//     ENTIRE viewport immediately. The user sees only glass from frame 1.
+//     The actual shrink animation happens after ScrollTrigger is ready.
+// =========================================================================
+const _isReturning = sessionStorage.getItem('returning-from-story');
+const _returnCardIndex = sessionStorage.getItem('expanding-card-index');
+let _returnOverlay = null;
+
+if (_isReturning && _returnCardIndex !== null) {
+    sessionStorage.removeItem('returning-from-story');
+    sessionStorage.removeItem('expanding-card-index');
+
+    // Create full-screen glass overlay covering everything.
+    // Uses backdrop-filter for the frosted glass look from frame 1.
+    _returnOverlay = document.createElement('div');
+    _returnOverlay.style.cssText = `
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        backdrop-filter: blur(var(--blur-radius, 8px)) saturate(var(--blur-vibrancy, 150%));
+        -webkit-backdrop-filter: blur(var(--blur-radius, 8px)) saturate(var(--blur-vibrancy, 150%));
+        background: rgba(255, 255, 255, 0.03);
+        pointer-events: none;
+    `;
+    document.body.appendChild(_returnOverlay);
+}
+
 // Initialize Lucide Icons
 lucide.createIcons();
 
@@ -67,8 +96,29 @@ function tickMouse() {
 
     mouseCurrent.x += dx * MOUSE_LERP;
     mouseCurrent.y += dy * MOUSE_LERP;
+
+    // CROSS-BROWSER OPTIMIZATION: Pre-compute light/shadow offsets in JS.
+    // This eliminates 4 CSS calc() evaluations per frame that cause lag
+    // on Safari, Firefox, and Brave. The browser just applies final values.
+    const lightX = ((50 - mouseCurrent.x) / 50) * 8;
+    const lightY = ((50 - mouseCurrent.y) / 50) * 8;
+    const shadowX = ((mouseCurrent.x - 50) / 50) * 8;
+    const shadowY = ((mouseCurrent.y - 50) / 50) * 8;
+
+    root.style.setProperty('--light-x', `${lightX}px`);
+    root.style.setProperty('--light-y', `${lightY}px`);
+    root.style.setProperty('--shadow-x', `${shadowX}px`);
+    root.style.setProperty('--shadow-y', `${shadowY}px`);
+
+    // Pre-compute drop shadow offsets (eliminates remaining calc() in .glassy-effect)
+    root.style.setProperty('--drop-x', `${shadowX * 2}px`);
+    root.style.setProperty('--drop-y', `${20 + shadowY * 2}px`);
+
+    // Pure numbers for backwards compatibility + pre-computed percentages for gradient
     root.style.setProperty('--mouse-x', mouseCurrent.x);
     root.style.setProperty('--mouse-y', mouseCurrent.y);
+    root.style.setProperty('--mouse-x-pct', `${mouseCurrent.x}%`);
+    root.style.setProperty('--mouse-y-pct', `${mouseCurrent.y}%`);
 }
 
 // =========================================================================
@@ -96,6 +146,7 @@ const svgTurb = document.getElementById('svg-turb');
 let isScrolling = false;
 let scrollTimer = null;
 let lastActiveCardForFilter = null;
+let filterReenableRAF = null;
 
 function enableSVGFilter(card) {
     if (lastActiveCardForFilter === card) return;
@@ -123,14 +174,21 @@ function onScrollStart() {
     if (!isScrolling) {
         isScrolling = true;
         disableAllSVGFilters();  // Kill SVG filter during scroll for smooth 60fps
+        // Add scroll class to all cards for CSS-based effect reduction
+        cards.forEach(c => c.classList.add('is-scrolling'));
+        // Cancel any pending re-enable
+        if (filterReenableRAF) cancelAnimationFrame(filterReenableRAF);
     }
     clearTimeout(scrollTimer);
     scrollTimer = setTimeout(() => {
         isScrolling = false;
-        // Re-enable SVG filter on the active card after scroll settles
-        if (lastActiveCardForFilter) {
-            enableSVGFilter(lastActiveCardForFilter);
-        }
+        cards.forEach(c => c.classList.remove('is-scrolling'));
+        // Use RAF for synchronized re-enable (smoother than raw setTimeout)
+        filterReenableRAF = requestAnimationFrame(() => {
+            if (lastActiveCardForFilter) {
+                enableSVGFilter(lastActiveCardForFilter);
+            }
+        });
     }, 200);
 }
 
@@ -291,6 +349,80 @@ let st = ScrollTrigger.create({
 });
 
 // =========================================================================
+//  9b. REVERSE ANIMATION — Scale-based shrink from viewport to card
+// =========================================================================
+if (_returnOverlay && _returnCardIndex !== null) {
+    const targetIdx = parseInt(_returnCardIndex);
+
+    // Scroll to the correct card position instantly (overlay covers everything)
+    const targetProgress = targetIdx / (totalCards - 1);
+    const scrollPos = st.start + targetProgress * (st.end - st.start);
+    window.scrollTo(0, scrollPos);
+    lenis.stop();
+
+    // Force the card stack to render at this card
+    renderStack(targetIdx);
+
+    // Wait 2 frames for layout to settle
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            const targetCard = cards[targetIdx];
+            if (!targetCard) { _returnOverlay.remove(); lenis.start(); return; }
+
+            const rect = targetCard.getBoundingClientRect();
+            const cardCenterX = rect.left + rect.width / 2;
+            const cardCenterY = rect.top + rect.height / 2;
+            const vpCenterX = viewW / 2;
+            const vpCenterY = viewH / 2;
+
+            // Reshape overlay from full-screen to card-sized
+            _returnOverlay.style.inset = 'auto';
+            _returnOverlay.style.top = rect.top + 'px';
+            _returnOverlay.style.left = rect.left + 'px';
+            _returnOverlay.style.width = rect.width + 'px';
+            _returnOverlay.style.height = rect.height + 'px';
+            _returnOverlay.style.borderRadius = 'var(--glass-radius)';
+            _returnOverlay.style.transformOrigin = 'center center';
+
+            // Scale so it still covers the viewport
+            const scaleX = viewW / rect.width;
+            const scaleY = viewH / rect.height;
+            const startScale = Math.max(scaleX, scaleY) * 1.05;
+            const translateX = vpCenterX - cardCenterX;
+            const translateY = vpCenterY - cardCenterY;
+
+            gsap.set(_returnOverlay, {
+                scale: startScale,
+                x: translateX,
+                y: translateY,
+            });
+
+            // Shrink from viewport to card position
+            gsap.to(_returnOverlay, {
+                scale: 1,
+                x: 0,
+                y: 0,
+                duration: 0.9,
+                ease: 'power3.inOut',
+                force3D: true,
+                onComplete: () => {
+                    gsap.to(_returnOverlay, {
+                        opacity: 0,
+                        duration: 0.3,
+                        ease: 'power2.out',
+                        onComplete: () => {
+                            _returnOverlay.remove();
+                            _returnOverlay = null;
+                            lenis.start();
+                        }
+                    });
+                }
+            });
+        });
+    });
+}
+
+// =========================================================================
 // 10. ARROW CLICK HANDLERS
 // =========================================================================
 upArrow.addEventListener('click', () => {
@@ -306,9 +438,8 @@ downArrow.addEventListener('click', () => {
 
 // =========================================================================
 // 11. CARD EXPAND → STORY PAGE TRANSITION
-//     - Smooth & slow glass expansion (no darkening)
-//     - Text content fades out, only the glass expands
-//     - After full coverage, navigate to story page
+//     Scale-based zoom from card center with ALL glass effects intact.
+//     Card moves to body, fixed at captured position, scales to viewport.
 // =========================================================================
 document.querySelectorAll('[data-action="read-story"]').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -317,66 +448,84 @@ document.querySelectorAll('[data-action="read-story"]').forEach(btn => {
 
         const card = btn.closest('.post');
         const storySlug = card.dataset.story;
+        const cardIndex = card.dataset.cardIndex;
         if (!storySlug) return;
 
+        // Capture visual position BEFORE anything changes
         const rect = card.getBoundingClientRect();
 
         // Freeze scrolling
         lenis.stop();
+        gsap.killTweensOf(card);
+
+        // Store which card was clicked (for reverse animation on return)
+        sessionStorage.setItem('expanding-card-index', cardIndex);
 
         // Fade out text content first
         const textEls = card.querySelectorAll('.date, h2, .excerpt, .btn-standard');
         gsap.to(textEls, {
             opacity: 0,
-            y: -20,
+            y: -15,
             duration: 0.3,
             stagger: 0.03,
             ease: "power2.in"
         });
 
-        // After text fades, expand the glass card
+        // After text fades, scale-expand the actual card
         gsap.delayedCall(0.25, () => {
-            // Kill scroll transforms and fix position
-            gsap.killTweensOf(card);
+            // Move card to body to escape stacking context
+            document.body.appendChild(card);
+            card.classList.add('is-expanding');
+            card.style.cssText = '';
 
-            // Copy current visual position to fixed coordinates
-            card.style.position = 'fixed';
+            // Fix at captured position
             card.style.top = rect.top + 'px';
             card.style.left = rect.left + 'px';
             card.style.width = rect.width + 'px';
             card.style.height = rect.height + 'px';
-            card.style.zIndex = '9999';
-            card.style.margin = '0';
-            card.style.transform = 'none';
-            card.style.maxWidth = 'none';
-            card.style.bottom = 'auto';
-            card.style.right = 'auto';
-            card.style.transition = 'none';
-            card.style.contain = 'none';
 
-            // Smooth GSAP expansion to fill viewport
-            gsap.to(card, {
-                top: 0,
-                left: 0,
-                width: '100vw',
-                height: '100vh',
-                borderRadius: 0,
-                duration: 0.8,
+            // Re-enable SVG refraction so oily glass texture shows during expansion
+            const glassBend = card.querySelector('.glass-bend');
+            if (glassBend) {
+                glassBend.style.filter = '';
+                glassBend.style.clipPath = 'none';
+                glassBend.style.webkitClipPath = 'none';
+            }
+
+            // Calculate scale to cover full viewport
+            const cardCenterX = rect.left + rect.width / 2;
+            const cardCenterY = rect.top + rect.height / 2;
+            const vpCenterX = viewW / 2;
+            const vpCenterY = viewH / 2;
+            const scaleX = viewW / rect.width;
+            const scaleY = viewH / rect.height;
+            const finalScale = Math.max(scaleX, scaleY) * 1.05;
+            const translateX = vpCenterX - cardCenterX;
+            const translateY = vpCenterY - cardCenterY;
+
+            // Prevent body scrollbars during expansion
+            document.body.style.overflow = 'hidden';
+
+            // Scale from center to fill viewport — all glass effects intact
+            gsap.fromTo(card, {
+                scale: 1,
+                x: 0,
+                y: 0,
+            }, {
+                scale: finalScale,
+                x: translateX,
+                y: translateY,
+                duration: 0.9,
                 ease: "power3.inOut",
+                force3D: true,
                 onComplete: () => {
-                    // Brief pause then navigate
-                    gsap.to(card, {
-                        opacity: 0,
-                        duration: 0.25,
-                        onComplete: () => {
-                            window.location.href = `story.html?slug=${storySlug}`;
-                        }
-                    });
+                    window.location.href = `story.html?slug=${storySlug}`;
                 }
             });
         });
     });
 });
+
 
 // =========================================================================
 // 12. UNIFIED RAF LOOP
@@ -400,3 +549,4 @@ window.addEventListener('resize', () => {
         ScrollTrigger.refresh();
     }, 250);
 }, { passive: true });
+

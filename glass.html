@@ -35,11 +35,13 @@
             --glare-opacity: 0.3;
 
             /* DYNAMIC LIGHTING MATH ENGINE */
-            /* Inverts the 0-100 mouse position into a -8px to +8px shadow offset */
-            --light-x: calc((50 - var(--mouse-x)) / 50 * 8px);
-            --light-y: calc((50 - var(--mouse-y)) / 50 * 8px);
-            --shadow-x: calc((var(--mouse-x) - 50) / 50 * 8px);
-            --shadow-y: calc((var(--mouse-y) - 50) / 50 * 8px);
+            /* Pre-computed by JS as final px values (no calc() per frame) */
+            --light-x: 0px;
+            --light-y: 0px;
+            --shadow-x: 0px;
+            --shadow-y: 0px;
+            --drop-x: 0px;
+            --drop-y: 20px;
         }
 
         body,
@@ -140,8 +142,8 @@
             cursor: grab;
             transition: width var(--transition), height var(--transition), padding var(--transition);
             box-sizing: border-box;
-            /* Made the drop shadow slightly dynamic as well */
-            box-shadow: calc(var(--shadow-x) * 2) calc(20px + var(--shadow-y) * 2) var(--drop-shadow-depth) var(--drop-shadow-color);
+            /* Dynamic drop shadow — uses pre-computed offsets from JS */
+            box-shadow: var(--drop-x, 0px) var(--drop-y, 20px) var(--drop-shadow-depth) var(--drop-shadow-color);
         }
 
         .liquid-glass.is-expanded {
@@ -171,15 +173,13 @@
             inset: 0;
             border-radius: inherit;
             background: var(--card-tint);
-            /* The X and Y coordinates are now wired directly to the mouse percentages */
+            /* Pre-computed px values from JS (no calc() needed) */
             box-shadow:
                 inset var(--light-x) var(--light-y) 10px 0 var(--bevel-light),
-                inset calc(var(--light-x) / 4) calc(var(--light-y) / 4) 2px 0 rgba(255, 255, 255, 0.9),
-                inset var(--shadow-x) var(--shadow-y) 10px 0 var(--bevel-shadow),
-                inset calc(var(--shadow-x) / 4) calc(var(--shadow-y) / 4) 2px 0 rgba(0, 0, 0, 0.6);
+                inset var(--shadow-x) var(--shadow-y) 10px 0 var(--bevel-shadow);
             z-index: 2;
             pointer-events: none;
-            transition: border-radius var(--transition);
+            transition: border-radius var(--transition), box-shadow 0.18s ease-out;
         }
 
         /* LAYER 3: DYNAMIC GLARE */
@@ -345,11 +345,21 @@
         // Centralized function to calculate the light source relative to the card
         function updateLighting(clientX, clientY) {
             const rect = card.getBoundingClientRect();
-            // Maps the cursor position to a 0 to 100 number inside the card bounds
             let x = ((clientX - rect.left) / rect.width) * 100;
             let y = ((clientY - rect.top) / rect.height) * 100;
 
-            // Push pure numbers to CSS for the dynamic bevel calc() engine
+            // Pre-compute light/shadow offsets (cross-browser perf fix)
+            const lightX = ((50 - x) / 50) * 8;
+            const lightY = ((50 - y) / 50) * 8;
+            const shadowX = ((x - 50) / 50) * 8;
+            const shadowY = ((y - 50) / 50) * 8;
+
+            root.style.setProperty('--light-x', `${lightX}px`);
+            root.style.setProperty('--light-y', `${lightY}px`);
+            root.style.setProperty('--shadow-x', `${shadowX}px`);
+            root.style.setProperty('--shadow-y', `${shadowY}px`);
+            root.style.setProperty('--drop-x', `${shadowX * 2}px`);
+            root.style.setProperty('--drop-y', `${20 + shadowY * 2}px`);
             root.style.setProperty('--mouse-x', x);
             root.style.setProperty('--mouse-y', y);
         }
