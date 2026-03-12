@@ -355,6 +355,68 @@ a {
 }
 
 /* =========================================================================
+   PHANTOM EXPANSION OVERLAY — lives at body level to avoid reparenting.
+   Has frosted glass (backdrop-filter) but NO SVG feTurbulence filter.
+   The frosted blur is cheap since we hide the card stack during expansion,
+   giving the GPU only one element to composite.
+   ========================================================================= */
+.expansion-phantom {
+    position: fixed;
+    z-index: 9999;
+    border-radius: var(--glass-radius);
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    will-change: transform, opacity;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    overflow: hidden;
+    background: transparent;
+    /* Drop shadow for depth */
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+}
+
+/* Frosted glass layer — backdrop-filter only, NO SVG feTurbulence */
+.expansion-phantom .glass-bend {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
+    -webkit-backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
+    /* NO filter: url(#glass-blur) — that's the expensive SVG part */
+    z-index: 1;
+    pointer-events: none;
+    will-change: backdrop-filter;
+    contain: strict;
+}
+
+/* Claymorphic bevel layer — static bevels (no mouse tracking during expansion) */
+.expansion-phantom .glass-volume {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--card-tint);
+    box-shadow:
+        inset 2px 2px 10px 0 rgba(255, 255, 255, 0.6),
+        inset -2px -2px 10px 0 rgba(0, 0, 0, 0.25);
+    z-index: 2;
+    pointer-events: none;
+}
+
+.expansion-phantom.is-active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+/* Hide the card stack during expansion for maximum GPU headroom */
+.sticky-card-section.section-hidden {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* =========================================================================
    INTERNAL SUSPENSION (Oil Float) - Text elements float independently
    ========================================================================= */
 
