@@ -685,6 +685,21 @@ a {
 }
 
 /* =========================================================================
+   DORMANT GLASS LAYERS: Cards deeply stacked (behind top 3) get their
+   glass sub-layers completely hidden. This skips rendering the expensive
+   backdrop-filter, SVG filter, box-shadow, and radial-gradient for 6-7
+   cards that are invisible anyway. JS manages the .glass-dormant class.
+   ========================================================================= */
+.post.glass-dormant .glass-bend,
+.post.glass-dormant .glass-volume,
+.post.glass-dormant .glass-glare {
+    content-visibility: hidden;
+    visibility: hidden;
+    will-change: auto;
+    contain: strict;
+}
+
+/* =========================================================================
    ACCESSIBILITY: Respect prefers-reduced-motion
    Disables transitions and animations for users who explicitly request it.
    ========================================================================= */
