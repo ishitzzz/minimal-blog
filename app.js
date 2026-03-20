@@ -5,8 +5,7 @@
 // =========================================================================
 
 // =========================================================================
-//  0. RETURNING FROM STORY — Minimal Fade Transition
-//     If returning from story page, the page starts faded out and fades in.
+//  0. RETURNING FROM STORY 
 // =========================================================================
 const _isReturning = sessionStorage.getItem('returning-from-story');
 const _returnCardIndex = sessionStorage.getItem('expanding-card-index');
@@ -14,9 +13,6 @@ const _returnCardIndex = sessionStorage.getItem('expanding-card-index');
 if (_isReturning && _returnCardIndex !== null) {
     sessionStorage.removeItem('returning-from-story');
     sessionStorage.removeItem('expanding-card-index');
-
-    // Start with opacity 0
-    document.body.style.opacity = '0';
 }
 
 // Initialize Lucide Icons
@@ -464,7 +460,7 @@ let st = ScrollTrigger.create({
 // =========================================================================
 //  9b. REVERSE ANIMATION — Scale-based shrink from viewport to card
 // =========================================================================
-// 9b. If returning from story, handle the minimal fade-in
+// 9b. If returning from story, scroll instantly
 if (_isReturning && _returnCardIndex !== null) {
     const targetIdx = parseInt(_returnCardIndex);
 
@@ -475,14 +471,6 @@ if (_isReturning && _returnCardIndex !== null) {
     
     // Force the card stack to render at this card
     renderStack(targetIdx);
-
-    // Simple fade in
-    gsap.to(document.body, {
-        opacity: 1,
-        duration: 0.5,
-        ease: 'power2.inOut',
-        clearProps: 'opacity'
-    });
 }
 
 // =========================================================================
@@ -500,9 +488,8 @@ downArrow.addEventListener('click', () => {
 });
 
 // =========================================================================
-// 11. CARD EXPAND → STORY PAGE TRANSITION — MINIMAL FADE
-//     Super lightweight transition. Just fades out the page and navigates.
-//     No expensive scale animations, no backdrop-filter resizing.
+// 11. CARD EXPAND → STORY PAGE TRANSITION
+//     Instant navigation, no animations.
 // =========================================================================
 document.querySelectorAll('[data-action="read-story"]').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -517,15 +504,8 @@ document.querySelectorAll('[data-action="read-story"]').forEach(btn => {
         // Store which card was clicked (for reverse positioning on return)
         sessionStorage.setItem('expanding-card-index', cardIndex);
 
-        // Simple fade out of the whole body
-        gsap.to(document.body, {
-            opacity: 0,
-            duration: 0.3,
-            ease: "power2.inOut",
-            onComplete: () => {
-                window.location.href = `story.html?slug=${storySlug}`;
-            }
-        });
+        // Instant navigation
+        window.location.href = `story.html?slug=${storySlug}`;
     });
 });
 
