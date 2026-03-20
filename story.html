@@ -1,428 +1,786 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Story — Tactile Blog</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
-    <!-- GSAP for reverse glass animation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Story — Tactile Blog</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
+  <!-- GSAP for reverse glass animation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
-    <style>
-        :root {
-            --glass-radius: 36px;
-            --blur-radius: 8px;
-            --blur-vibrancy: 150%;
-            --card-tint: rgba(255, 255, 255, 0.05);
-            --bevel-light: rgba(255, 255, 255, 0.7);
-            --bevel-shadow: rgba(0, 0, 0, 0.4);
-            --glare-opacity: 0.15;
-            --mouse-x: 50;
-            --mouse-y: 50;
-            --light-x: calc((50 - var(--mouse-x)) / 50 * 8px);
-            --light-y: calc((50 - var(--mouse-y)) / 50 * 8px);
-            --shadow-x: calc((var(--mouse-x) - 50) / 50 * 8px);
-            --shadow-y: calc((var(--mouse-y) - 50) / 50 * 8px);
-        }
+  <style>
+    :root {
+      /* =============================================
+           USER CONTROLS: Polaroid & Modal Tweaks
+           ============================================= */
+      /* Distance from center of screen to polaroid edge. Increase to push polaroids outwards. Decrease to bring them closer to text. */
+      --polaroid-offset-x: 480px;
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+      /* Modal Background Controls */
+      --modal-glass-blur: 09px;
+      /* How blurry the modal glass is. Default cards are 8px. */
+      --modal-glass-tint: rgba(255,
+          255,
+          255,
+          0.18);
+      /* Whiteness of the modal background. Increase 0.45 for more visibility of text. */
 
-        body {
-            min-height: 100vh;
-            font-family: 'Special Elite', monospace;
-            color: #1c1c1c;
-            background: url('background.jpg') center / cover no-repeat fixed;
-            background-color: #e8e0d4;
-            overflow-x: hidden;
-        }
+      --glass-radius: 36px;
+      --blur-radius: 8px;
+      --blur-vibrancy: 150%;
+      --card-tint: rgba(255, 255, 255, 0.05);
+      --bevel-light: rgba(255, 255, 255, 0.7);
+      --bevel-shadow: rgba(0, 0, 0, 0.4);
+      --glare-opacity: 0.15;
+      --mouse-x: 50;
+      --mouse-y: 50;
+      --light-x: calc((50 - var(--mouse-x)) / 50 * 8px);
+      --light-y: calc((50 - var(--mouse-y)) / 50 * 8px);
+      --shadow-x: calc((var(--mouse-x) - 50) / 50 * 8px);
+      --shadow-y: calc((var(--mouse-y) - 50) / 50 * 8px);
+    }
 
-        /* Content area — clean, no glass */
-        .story-container {
-            position: relative;
-            min-height: 100vh;
-            padding: 80px 60px;
-            max-width: 800px;
-            margin: 0 auto;
-        }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-        /* =========================================================
+    body {
+      min-height: 100vh;
+      font-family: "Special Elite", monospace;
+      color: #1c1c1c;
+      background: url("background.jpg") center / cover no-repeat fixed;
+      background-color: #e8e0d4;
+      overflow-x: hidden;
+    }
+
+    /* Content area — clean, no glass */
+    .story-container {
+      position: relative;
+      min-height: 100vh;
+      padding: 80px 60px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    /* =========================================================
            BACK BUTTON — Claymorphic glass pill (matches card style)
            ========================================================= */
-        .back-btn {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-family: inherit;
-            font-size: 1rem;
-            color: #333;
-            background: transparent;
-            border: none;
-            border-radius: 40px;
-            padding: 12px 28px;
-            cursor: pointer;
-            margin-bottom: 40px;
-            text-decoration: none;
-            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.18);
-            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            overflow: hidden;
-        }
+    .back-btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: inherit;
+      font-size: 1rem;
+      color: #333;
+      background: transparent;
+      border: none;
+      border-radius: 40px;
+      padding: 12px 28px;
+      cursor: pointer;
+      margin-bottom: 40px;
+      text-decoration: none;
+      text-shadow: 0 4px 8px rgba(0, 0, 0, 0.18);
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      overflow: hidden;
+    }
 
-        /* Glass bend layer */
-        .back-btn .glass-bend {
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
-            -webkit-backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
-            z-index: 1;
-            pointer-events: none;
-        }
+    /* Glass bend layer */
+    .back-btn .glass-bend {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
+      -webkit-backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
+      z-index: 1;
+      pointer-events: none;
+    }
 
-        /* Glass volume layer - bevels */
-        .back-btn .glass-volume {
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            background: var(--card-tint);
-            box-shadow:
-                inset var(--light-x) var(--light-y) 6px 0 var(--bevel-light),
-                inset calc(var(--light-x) / 4) calc(var(--light-y) / 4) 1px 0 rgba(255, 255, 255, 0.9),
-                inset var(--shadow-x) var(--shadow-y) 6px 0 var(--bevel-shadow),
-                inset calc(var(--shadow-x) / 4) calc(var(--shadow-y) / 4) 1px 0 rgba(0, 0, 0, 0.5);
-            z-index: 2;
-            pointer-events: none;
-        }
+    /* Glass volume layer - bevels */
+    .back-btn .glass-volume {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: var(--card-tint);
+      box-shadow:
+        inset var(--light-x) var(--light-y) 6px 0 var(--bevel-light),
+        inset calc(var(--light-x) / 4) calc(var(--light-y) / 4) 1px 0 rgba(255, 255, 255, 0.9),
+        inset var(--shadow-x) var(--shadow-y) 6px 0 var(--bevel-shadow),
+        inset calc(var(--shadow-x) / 4) calc(var(--shadow-y) / 4) 1px 0 rgba(0, 0, 0, 0.5);
+      z-index: 2;
+      pointer-events: none;
+    }
 
-        /* Glass glare layer */
-        .back-btn .glass-glare {
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            background: radial-gradient(300px circle at calc(var(--mouse-x) * 1%) calc(var(--mouse-y) * 1%),
-                    rgba(255, 255, 255, var(--glare-opacity)),
-                    transparent 40%);
-            z-index: 3;
-            pointer-events: none;
-        }
+    /* Glass glare layer */
+    .back-btn .glass-glare {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: radial-gradient(300px circle at calc(var(--mouse-x) * 1%) calc(var(--mouse-y) * 1%),
+          rgba(255, 255, 255, var(--glare-opacity)),
+          transparent 40%);
+      z-index: 3;
+      pointer-events: none;
+    }
 
-        .back-btn span,
-        .back-btn svg {
-            position: relative;
-            z-index: 4;
-        }
+    .back-btn span,
+    .back-btn svg {
+      position: relative;
+      z-index: 4;
+    }
 
-        .back-btn:hover {
-            transform: scale(1.05);
-        }
+    .back-btn:hover {
+      transform: scale(1.05);
+    }
 
-        .back-btn:active {
-            transform: scale(0.95);
-        }
+    .back-btn:active {
+      transform: scale(0.95);
+    }
 
-        .back-btn svg {
-            width: 18px;
-            height: 18px;
-        }
+    .back-btn svg {
+      width: 18px;
+      height: 18px;
+    }
 
-        /* Story meta */
-        .story-date {
-            font-size: 1rem;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 16px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
+    /* Story meta */
+    .story-date {
+      font-size: 1rem;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 16px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
 
-        .story-title {
-            font-size: 3rem;
-            font-weight: normal;
-            line-height: 1.15;
-            margin-bottom: 30px;
-            text-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
+    .story-title {
+      font-size: 3rem;
+      font-weight: normal;
+      line-height: 1.15;
+      margin-bottom: 30px;
+      text-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
 
-        .story-divider {
-            width: 60px;
-            height: 2px;
-            background: rgba(0, 0, 0, 0.2);
-            margin-bottom: 40px;
-            border: none;
-        }
+    .story-divider {
+      width: 60px;
+      height: 2px;
+      background: rgba(0, 0, 0, 0.2);
+      margin-bottom: 40px;
+      border: none;
+    }
 
-        .story-body {
-            font-size: 1.2rem;
-            line-height: 1.85;
-            color: #333;
-            max-width: 680px;
-        }
+    .story-body {
+      font-size: 1.2rem;
+      line-height: 1.85;
+      color: #333;
+      max-width: 680px;
+    }
 
-        .story-body p {
-            margin-bottom: 24px;
-            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-        }
+    .story-body p {
+      margin-bottom: 24px;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
 
-        .story-body p:first-child::first-letter {
-            font-size: 3.5rem;
-            float: left;
-            line-height: 1;
-            margin-right: 10px;
-            margin-top: 4px;
-            color: #1a1a1a;
-        }
+    .story-body p:first-child::first-letter {
+      font-size: 3.5rem;
+      float: left;
+      line-height: 1;
+      margin-right: 10px;
+      margin-top: 4px;
+      color: #1a1a1a;
+    }
 
-        /* Footer */
-        .story-footer {
-            margin-top: 80px;
-            padding-top: 30px;
-            border-top: 1px solid rgba(0, 0, 0, 0.1);
-            color: #888;
-            font-size: 0.9rem;
-        }
+    /* Footer */
+    .story-footer {
+      margin-top: 80px;
+      padding-top: 30px;
+      border-top: 1px solid rgba(0, 0, 0, 0.1);
+      color: #888;
+      font-size: 0.9rem;
+    }
 
-        /* =========================================================
+    /* =========================================================
            GLASS OVERLAY — Used for entry/exit transition
            Full-screen glass that shrinks away to reveal content
            ========================================================= */
-        .glass-transition-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 9999;
-            pointer-events: none;
-            backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
-            -webkit-backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 0;
-        }
+    .glass-transition-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: none;
+      backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
+      -webkit-backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 0;
+    }
 
-        /* Overlay for back-transition (starts transparent, becomes glass) */
-        .glass-exit-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 9999;
-            pointer-events: none;
-            backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
-            -webkit-backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 0;
-            opacity: 0;
-        }
+    /* Overlay for back-transition (starts transparent, becomes glass) */
+    .glass-exit-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: none;
+      backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
+      -webkit-backdrop-filter: blur(var(--blur-radius)) saturate(var(--blur-vibrancy));
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 0;
+      opacity: 0;
+    }
 
-        @media (max-width: 768px) {
-            .story-container {
-                padding: 40px 24px;
-            }
+    /* =========================================================
+           POLAROID MODAL & COMPONENTS
+           ========================================================= */
+    .glass-card {
+      position: relative;
+      border-radius: var(--glass-radius);
+      transform: translateZ(0);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
 
-            .story-title {
-                font-size: 2rem;
-            }
+    .glass-card .glass-bend {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      backdrop-filter: blur(var(--modal-glass-blur)) saturate(var(--blur-vibrancy));
+      -webkit-backdrop-filter: blur(var(--modal-glass-blur)) saturate(var(--blur-vibrancy));
+      filter: url(#story-glass-blur);
+      /* Matches the SVG filter in story.html */
+      z-index: 1;
+      clip-path: inset(0 round var(--glass-radius));
+      pointer-events: none;
+    }
 
-            .story-body {
-                font-size: 1.05rem;
-            }
-        }
-    </style>
+    .glass-card .glass-volume {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: var(--modal-glass-tint);
+      box-shadow:
+        inset var(--light-x) var(--light-y) 10px 0 var(--bevel-light),
+        inset calc(var(--light-x) / 4) calc(var(--light-y) / 4) 1px 0 rgba(255, 255, 255, 0.9),
+        inset var(--shadow-x) var(--shadow-y) 10px 0 var(--bevel-shadow),
+        inset calc(var(--shadow-x) / 4) calc(var(--shadow-y) / 4) 1px 0 rgba(0, 0, 0, 0.5);
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .glass-card .glass-glare {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: radial-gradient(800px circle at calc(var(--mouse-x) * 1%) calc(var(--mouse-y) * 1%),
+          rgba(255, 255, 255, var(--glare-opacity)),
+          transparent 40%);
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .glass-card-content {
+      position: relative;
+      z-index: 4;
+      display: flex;
+      width: 100%;
+      height: 100%;
+      padding: 40px;
+      gap: 40px;
+      align-items: center;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      /* activated when opened */
+      opacity: 0;
+      visibility: hidden;
+      transition:
+        opacity 0.4s ease,
+        visibility 0.4s ease;
+    }
+
+    .modal-overlay.active {
+      pointer-events: auto;
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+    }
+
+    .polaroid-modal {
+      width: 850px;
+      max-width: 90vw;
+      height: 450px;
+      max-height: 85vh;
+      display: flex;
+      padding: 0;
+      overflow: hidden;
+      transform: scale(0.95) translateY(20px);
+      transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      opacity: 0;
+    }
+
+    .modal-overlay.active .polaroid-modal {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+    }
+
+    .modal-left {
+      flex: 0 0 35%;
+      height: 100%;
+      background: #fdfdfd;
+      padding: 15px 15px 50px 15px;
+      /* polaroid proportions */
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+      transform: rotate(-2deg);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-left img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      flex: 1;
+    }
+
+    .modal-right {
+      flex: 1;
+      color: #1c1c1c;
+      overflow-y: auto;
+      font-size: 1.15rem;
+      line-height: 1.7;
+      padding-right: 15px;
+    }
+
+    .modal-right h2 {
+      font-size: 2.2rem;
+      font-weight: normal;
+      margin-bottom: 20px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      background: rgba(0, 0, 0, 0.05);
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #333;
+      transition: all 0.2s ease;
+    }
+
+    .modal-close:hover {
+      background: rgba(0, 0, 0, 0.15);
+      transform: scale(1.1);
+    }
+
+    .modal-close:active {
+      transform: scale(0.95);
+    }
+
+    /* Polaroids Floating Around */
+    .polaroids-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      /* Let clicks pass through empty space */
+      z-index: 0;
+      overflow: hidden;
+      /* Hide overflow horizontally */
+    }
+
+    .polaroid-wrapper {
+      position: absolute;
+      pointer-events: auto;
+      /* Catch clicks */
+      cursor: pointer;
+      z-index: 5;
+      left: 50%;
+      /* Pin to exact center horizontally */
+    }
+
+    .polaroid-wrapper.left-side {
+      /* Move left by offset, plus shift its own width to correctly margin its right edge */
+      transform: translateX(calc(-1 * var(--polaroid-offset-x))) translateX(-100%);
+    }
+
+    .polaroid-wrapper.right-side {
+      /* Move right by offset */
+      transform: translateX(var(--polaroid-offset-x));
+    }
+
+    .polaroid {
+      width: 220px;
+      padding: 12px 12px 45px 12px;
+      background: #fafafa;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+      transform-origin: center center;
+      transition: box-shadow 0.3s ease;
+      /* Rotation applied here to keep X/Y transform logic clean on the wrapper */
+      transform: rotate(var(--rotation, 0deg));
+    }
+
+    .polaroid img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      display: block;
+      pointer-events: none;
+    }
+
+    .polaroid-wrapper:hover .polaroid {
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+    }
+
+    @media (max-width: 768px) {
+      .polaroid-modal {
+        flex-direction: column;
+        height: 80vh;
+      }
+
+      .glass-card-content {
+        flex-direction: column;
+        padding: 25px;
+        gap: 20px;
+      }
+
+      .modal-left {
+        flex: 0 0 200px;
+        width: 180px;
+        margin: 0 auto;
+        transform: rotate(0);
+      }
+
+      .modal-right {
+        flex: 1;
+      }
+
+      .polaroid {
+        width: 150px;
+      }
+
+      .polaroid img {
+        height: 130px;
+      }
+    }
+  </style>
 </head>
 
 <body>
-    <!-- SVG Refraction Filter (for entry/exit glass transition) -->
-    <svg style="position: absolute; left: -9999px; pointer-events: none;" xmlns="http://www.w3.org/2000/svg">
-        <filter id="story-glass-blur" x="-20%" y="-20%" width="140%" height="140%" filterUnits="objectBoundingBox">
-            <feTurbulence type="fractalNoise" baseFrequency="0.003 0.007" numOctaves="1" result="turbulence" />
-            <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="100" xChannelSelector="R"
-                yChannelSelector="G" />
-        </filter>
-    </svg>
+  <!-- SVG Refraction Filter (for entry/exit glass transition) -->
+  <svg style="position: absolute; left: -9999px; pointer-events: none" xmlns="http://www.w3.org/2000/svg">
+    <filter id="story-glass-blur" x="-20%" y="-20%" width="140%" height="140%" filterUnits="objectBoundingBox">
+      <feTurbulence type="fractalNoise" baseFrequency="0.003 0.007" numOctaves="1" result="turbulence" />
+      <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="100" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </svg>
 
-    <div class="story-container">
-        <!-- Glass Back Button (claymorphic, matches card glass style) -->
-        <button class="back-btn" id="back-btn">
-            <div class="glass-bend"></div>
-            <div class="glass-volume"></div>
-            <div class="glass-glare"></div>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="m15 18-6-6 6-6" />
-            </svg>
-            <span>Back</span>
-        </button>
-
-        <p class="story-date" id="story-date">Loading...</p>
-        <h1 class="story-title" id="story-title">Loading...</h1>
-        <hr class="story-divider">
-
-        <div class="story-body" id="story-body">
-            <p>Loading story content...</p>
-        </div>
-
-        <div class="story-footer">
-            <p>&copy; 2026 Tactile Blog. All rights reserved.</p>
-        </div>
+  <div class="polaroids-container">
+    <!-- Floating Polaroids -->
+    <div class="polaroid-wrapper left-side" style="top: 15%; --rotation: 12deg" data-title="Memory Fragment"
+      data-text="A captured moment in time. The emulsion preserves the light exactly as it hit the lens that day, locking the memory into this small physical space."
+      data-img="https://images.unsplash.com/photo-1493246507139-91e8fad9978e?w=400">
+      <div class="polaroid">
+        <img src="https://images.unsplash.com/photo-1493246507139-91e8fad9978e?w=400" alt="Memory" />
+      </div>
     </div>
 
-    <script>
-        // =========================================================================
-        //  DYNAMIC LIGHTING — RAF-throttled, lerp-smoothed
-        // =========================================================================
-        const root = document.documentElement;
-        let mouseTarget = { x: 50, y: 50 };
-        let mouseCurrent = { x: 50, y: 50 };
-        const MOUSE_LERP = 0.12;
+    <div class="polaroid-wrapper right-side" style="top: 45%; --rotation: -8deg" data-title="Light & Shadow"
+      data-text="Physical objects cast real shadows. We strive to recreate this authenticity in the digital realm, bridging the gap between physical and intangible."
+      data-img="https://images.unsplash.com/photo-1518640467707-6811f4a6ab73?w=400">
+      <div class="polaroid">
+        <img src="https://images.unsplash.com/photo-1518640467707-6811f4a6ab73?w=400" alt="Light" />
+      </div>
+    </div>
 
-        window.addEventListener('mousemove', (e) => {
-            mouseTarget.x = (e.clientX / window.innerWidth) * 100;
-            mouseTarget.y = (e.clientY / window.innerHeight) * 100;
-        }, { passive: true });
+    <div class="polaroid-wrapper left-side" style="top: 75%; --rotation: 5deg" data-title="The Texture of Grain"
+      data-text="Film grain is random, mathematically chaotic but visually pleasing. It adds a layer of depth that smooth pixels can never quite achieve."
+      data-img="https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?w=400">
+      <div class="polaroid">
+        <img src="https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?w=400" alt="Texture" />
+      </div>
+    </div>
+  </div>
 
-        function animateLoop() {
-            mouseCurrent.x += (mouseTarget.x - mouseCurrent.x) * MOUSE_LERP;
-            mouseCurrent.y += (mouseTarget.y - mouseCurrent.y) * MOUSE_LERP;
-            root.style.setProperty('--mouse-x', mouseCurrent.x);
-            root.style.setProperty('--mouse-y', mouseCurrent.y);
-            requestAnimationFrame(animateLoop);
-        }
-        requestAnimationFrame(animateLoop);
+  <!-- Modal Overlay for Polaroid -->
+  <div class="modal-overlay" id="polaroid-modal">
+    <div class="modal-backdrop" id="modal-backdrop"></div>
+    <div class="glass-card polaroid-modal" id="modal-card">
+      <div class="glass-bend"></div>
+      <div class="glass-volume"></div>
+      <div class="glass-glare"></div>
+      <button class="modal-close" id="modal-close">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
+        </svg>
+      </button>
+      <div class="glass-card-content">
+        <div class="modal-left">
+          <img id="modal-img" src="" alt="Polaroid" />
+        </div>
+        <div class="modal-right">
+          <h2 id="modal-title"></h2>
+          <p id="modal-text"></p>
+        </div>
+      </div>
+    </div>
+  </div>
 
-        // =========================================================================
-        //  STORY DATA
-        // =========================================================================
-        const stories = {
-            'art-of-digital-paper': {
-                date: 'October 24, 2026',
-                title: 'The Art of Digital Paper',
-                body: `<p>There is something deeply unsettling about the perfection of a modern screen. Every pixel aligned, every gradient mathematically smooth, every edge anti-aliased into oblivion. We have engineered all the friction out of our visual experiences, and in doing so, we have made them feel lifeless.</p>
+  <div class="story-container">
+    <!-- Glass Back Button (claymorphic, matches card glass style) -->
+    <button class="back-btn" id="back-btn">
+      <div class="glass-bend"></div>
+      <div class="glass-volume"></div>
+      <div class="glass-glare"></div>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="m15 18-6-6 6-6" />
+      </svg>
+      <span>Back</span>
+    </button>
+
+    <p class="story-date" id="story-date">Loading...</p>
+    <h1 class="story-title" id="story-title">Loading...</h1>
+    <hr class="story-divider" />
+
+    <div class="story-body" id="story-body">
+      <p>Loading story content...</p>
+    </div>
+
+    <div class="story-footer">
+      <p>&copy; 2026 Tactile Blog. All rights reserved.</p>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    //  DYNAMIC LIGHTING — RAF-throttled, lerp-smoothed
+    // =========================================================================
+    const root = document.documentElement;
+    let mouseTarget = { x: 50, y: 50 };
+    let mouseCurrent = { x: 50, y: 50 };
+    const MOUSE_LERP = 0.12;
+
+    window.addEventListener(
+      "mousemove",
+      (e) => {
+        mouseTarget.x = (e.clientX / window.innerWidth) * 100;
+        mouseTarget.y = (e.clientY / window.innerHeight) * 100;
+      },
+      { passive: true },
+    );
+
+    function animateLoop() {
+      mouseCurrent.x += (mouseTarget.x - mouseCurrent.x) * MOUSE_LERP;
+      mouseCurrent.y += (mouseTarget.y - mouseCurrent.y) * MOUSE_LERP;
+      root.style.setProperty("--mouse-x", mouseCurrent.x);
+      root.style.setProperty("--mouse-y", mouseCurrent.y);
+      requestAnimationFrame(animateLoop);
+    }
+    requestAnimationFrame(animateLoop);
+
+    // =========================================================================
+    //  STORY DATA
+    // =========================================================================
+    const stories = {
+      "art-of-digital-paper": {
+        date: "October 24, 2026",
+        title: "The Art of Digital Paper",
+        body: `<p>There is something deeply unsettling about the perfection of a modern screen. Every pixel aligned, every gradient mathematically smooth, every edge anti-aliased into oblivion. We have engineered all the friction out of our visual experiences, and in doing so, we have made them feel lifeless.</p>
                 <p>Digital paper is an attempt to bring back what we lost. Not through crude imitation of physical media — not a JPEG of crumpled paper tiled across a background — but through procedural generation of the qualities that make physical materials feel alive: the subtle grain, the microscopic fiber structure, the way ambient light plays differently across every square centimeter.</p>
                 <p>WebGL shaders offer us the tools to generate these textures in real-time. A fragment shader can compute Perlin noise to create organic grain patterns. It can simulate the directional alignment of paper fibers. It can model the subtle variations in surface reflectivity that give physical paper its characteristic warmth.</p>
                 <p>The key insight is that these textures should never be static. Physical paper responds to its environment — it catches light differently as you tilt it, it develops a patina over time. Our digital paper should breathe in the same way, responding to cursor movement, scroll position, and even the time of day.</p>
-                <p>This is not skeuomorphism in the old sense. We are not trying to make a screen look like a desk. We are extracting the essential qualities of physical materials — their texture, their response to light, their imperfection — and translating those qualities into a digital language that screens can natively express.</p>`
-            },
-            'liquid-interfaces': {
-                date: 'October 20, 2026',
-                title: 'Liquid Interfaces',
-                body: `<p>Every interface element you have ever interacted with has been a rigid box. Buttons are rectangles. Cards are rectangles. Modals are rectangles. The entire digital world is built from sharp-cornered containers that stack and tile with mechanical precision.</p>
+                <p>This is not skeuomorphism in the old sense. We are not trying to make a screen look like a desk. We are extracting the essential qualities of physical materials — their texture, their response to light, their imperfection — and translating those qualities into a digital language that screens can natively express.</p>`,
+      },
+      "liquid-interfaces": {
+        date: "October 20, 2026",
+        title: "Liquid Interfaces",
+        body: `<p>Every interface element you have ever interacted with has been a rigid box. Buttons are rectangles. Cards are rectangles. Modals are rectangles. The entire digital world is built from sharp-cornered containers that stack and tile with mechanical precision.</p>
                 <p>But what if interface elements could flow? What if a card could behave like a drop of mercury — holding its shape through surface tension, but deforming under pressure, splitting and merging, pooling at the bottom of the screen like rain on a windowpane?</p>
                 <p>The technology to achieve this is already here. CSS backdrop-filters give us real-time frosted glass. SVG displacement maps can warp any element as if it were being viewed through water. GSAP can animate any property with physically-modeled spring dynamics that make elements feel heavy and viscous rather than weightless and digital.</p>
                 <p>The challenge is restraint. A fully liquid interface would be unusable — we need the predictability of rigid layouts for navigation and content consumption. The liquid qualities should emerge only at the boundaries: the way a card separates from its stack, the way a button depresses under a click, the way a drawer slides open with a slight overshoot that suggests real mass and momentum.</p>
-                <p>These details are imperceptible in isolation, but collectively they transform the experience from using a tool to holding an object.</p>`
-            },
-            'typography-as-texture': {
-                date: 'September 12, 2026',
-                title: 'Typography as Texture',
-                body: `<p>Modern typography has become invisible. We have optimized our typefaces for readability to such a degree that they have lost all character. Open Sans, Roboto, Inter — these are not fonts, they are anti-fonts. They are designed to disappear, to let content pass through them without friction.</p>
+                <p>These details are imperceptible in isolation, but collectively they transform the experience from using a tool to holding an object.</p>`,
+      },
+      "typography-as-texture": {
+        date: "September 12, 2026",
+        title: "Typography as Texture",
+        body: `<p>Modern typography has become invisible. We have optimized our typefaces for readability to such a degree that they have lost all character. Open Sans, Roboto, Inter — these are not fonts, they are anti-fonts. They are designed to disappear, to let content pass through them without friction.</p>
                 <p>There is a counter-movement emerging. Designers are reaching for fonts that have texture — that slow the reader down just enough to make them aware that they are reading. Typewriter fonts like Special Elite and Courier carry the ghosts of physical machines in every letterform. Each character sits slightly differently on its baseline, creating a rhythm that is human rather than mechanical.</p>
                 <p>This is not about nostalgia. It is about friction as a design tool. In a world where every surface is frictionless, the introduction of deliberate resistance — a font that makes you feel each word, a transition that takes just a beat longer than expected — creates moments of presence that smooth interfaces cannot achieve.</p>
-                <p>The typewriter aesthetic works particularly well in glass-morphism designs because it creates a tension between the hyper-modern translucency of the glass and the analog warmth of the type. The text appears to float inside the glass like specimens in amber, preserved and elevated by their container.</p>`
-            },
-            'depth-in-flatness': {
-                date: 'August 05, 2026',
-                title: 'Depth in Flatness',
-                body: `<p>Flat design was a necessary correction. The skeuomorphic excesses of early iOS — with its felt textures, wood-grain address books, and leather-stitched calendars — had become a parody of themselves. The corrective was radical: strip away every shadow, gradient, and texture. What remains is pure function.</p>
+                <p>The typewriter aesthetic works particularly well in glass-morphism designs because it creates a tension between the hyper-modern translucency of the glass and the analog warmth of the type. The text appears to float inside the glass like specimens in amber, preserved and elevated by their container.</p>`,
+      },
+      "depth-in-flatness": {
+        date: "August 05, 2026",
+        title: "Depth in Flatness",
+        body: `<p>Flat design was a necessary correction. The skeuomorphic excesses of early iOS — with its felt textures, wood-grain address books, and leather-stitched calendars — had become a parody of themselves. The corrective was radical: strip away every shadow, gradient, and texture. What remains is pure function.</p>
                 <p>But in the decade since flat design triumphed, we have discovered its limitations. Purely flat interfaces lack hierarchy. Without depth cues, elements compete for attention on an equal plane. Users must rely entirely on color and size to distinguish interactive elements from decorative ones, primary actions from secondary ones.</p>
                 <p>The solution is not to return to skeuomorphism, but to develop a new vocabulary of depth. Subtle shadows that suggest elevation without depicting real-world materials. Glass-like translucency that creates layers without explicit borders. Motion that implies mass and momentum without mimicking physical objects.</p>
-                <p>This new depth is abstract rather than representational. A card does not look like a playing card — it is simply an element that exists at a certain elevation above others, casting a proportional shadow and blurring what lies beneath it. The Z-axis becomes a design dimension rather than a simulation.</p>`
-            },
-            'the-new-skeuomorphism': {
-                date: 'July 22, 2026',
-                title: 'The New Skeuomorphism',
-                body: `<p>History does not repeat, but it rhymes. The design principles that Steve Jobs championed in early iOS are returning, transformed by a decade of flat design into something more sophisticated and restrained.</p>
+                <p>This new depth is abstract rather than representational. A card does not look like a playing card — it is simply an element that exists at a certain elevation above others, casting a proportional shadow and blurring what lies beneath it. The Z-axis becomes a design dimension rather than a simulation.</p>`,
+      },
+      "the-new-skeuomorphism": {
+        date: "July 22, 2026",
+        title: "The New Skeuomorphism",
+        body: `<p>History does not repeat, but it rhymes. The design principles that Steve Jobs championed in early iOS are returning, transformed by a decade of flat design into something more sophisticated and restrained.</p>
                 <p>The new skeuomorphism does not try to make a screen look like a physical object. Instead, it borrows the physics of real objects — their weight, their reflectivity, their response to force — and applies those physics to digital elements. A button does not look like a plastic widget, but it depresses with a spring-damped animation that makes your finger feel the click.</p>
                 <p>Glass morphism is the purest expression of this trend. It takes one physical property — the translucency and refraction of glass — and makes it the foundation of an entire design language. No textures, no gradients, no decorative elements. Just light passing through a material, bent and scattered and blurred by its passage.</p>
-                <p>This convergence of physical realism and digital abstraction may be the synthesis that design has been searching for since the original iPhone. Not fake real, not pure flat, but something that is authentically digital while remaining corporeally satisfying.</p>`
-            },
-            'kinetic-typography': {
-                date: 'June 14, 2026',
-                title: 'Kinetic Typography',
-                body: `<p>Words on a screen are weightless. They appear and disappear instantaneously, scroll without momentum, and rearrange themselves without regard for the space they previously occupied. This weightlessness makes digital text feel ephemeral and disposable.</p>
+                <p>This convergence of physical realism and digital abstraction may be the synthesis that design has been searching for since the original iPhone. Not fake real, not pure flat, but something that is authentically digital while remaining corporeally satisfying.</p>`,
+      },
+      "kinetic-typography": {
+        date: "June 14, 2026",
+        title: "Kinetic Typography",
+        body: `<p>Words on a screen are weightless. They appear and disappear instantaneously, scroll without momentum, and rearrange themselves without regard for the space they previously occupied. This weightlessness makes digital text feel ephemeral and disposable.</p>
                 <p>Kinetic typography restores the physicality of words. A headline that drops into place with a slight bounce feels heavier, more permanent, more worthy of attention than one that simply appears. A paragraph that slides in with mass-proportional easing — heavy words arriving slower than light ones — creates a reading rhythm that mirrors the natural cadence of speech.</p>
                 <p>The mathematics of physical motion are well-established. Spring dynamics, damping coefficients, coefficient of restitution — these engineering principles translate directly into animation curves. GSAP's physics plugins make it trivial to apply real-world motion models to typography.</p>
-                <p>The result is text that feels carved rather than rendered, placed rather than displayed. Each word occupies its space with the conviction of a letterpress impression, and the transitions between states carry the momentum of physical objects being rearranged by unseen hands.</p>`
-            },
-            'minimalist-color-theory': {
-                date: 'May 09, 2026',
-                title: 'Minimalist Color Theory',
-                body: `<p>Most digital interfaces use too much color. Every button is a different shade, every section has its own palette, every state change introduces a new hue. The result is visual noise that overwhelms the content it is meant to support.</p>
+                <p>The result is text that feels carved rather than rendered, placed rather than displayed. Each word occupies its space with the conviction of a letterpress impression, and the transitions between states carry the momentum of physical objects being rearranged by unseen hands.</p>`,
+      },
+      "minimalist-color-theory": {
+        date: "May 09, 2026",
+        title: "Minimalist Color Theory",
+        body: `<p>Most digital interfaces use too much color. Every button is a different shade, every section has its own palette, every state change introduces a new hue. The result is visual noise that overwhelms the content it is meant to support.</p>
                 <p>Minimalist color theory proposes the opposite approach: use color only where it is absolutely necessary, and derive the rest of your visual hierarchy from contrast, spacing, and typography. A well-designed interface should be fully functional in grayscale, with color added only as a final layer of meaning.</p>
                 <p>In glass-morphism designs, color becomes even more complex because it is not applied — it is transmitted. The colors in a glass card are not the designer's colors; they are the colors of whatever lies beneath the glass, filtered and distorted by the material's properties. The designer's control is indirect: they choose the blur radius, the saturation multiplier, the tint opacity, and let the environment supply the actual hues.</p>
-                <p>This indirect approach to color creates interfaces that are inherently responsive to their context. The same glass card will look warm over a sunset photograph and cool over a winter landscape, adapting its palette without any programmatic intervention.</p>`
-            },
-            'tactile-feedback': {
-                date: 'April 02, 2026',
-                title: 'Tactile Feedback',
-                body: `<p>We touch glass all day. The smooth, cold, perfectly flat surface of a phone screen or tablet is the primary texture of modern life. And yet the interfaces displayed on that glass do nothing to acknowledge the physical reality of the touch. A button on screen feels exactly like empty space — the same temperature, the same resistance, the same nothing.</p>
+                <p>This indirect approach to color creates interfaces that are inherently responsive to their context. The same glass card will look warm over a sunset photograph and cool over a winter landscape, adapting its palette without any programmatic intervention.</p>`,
+      },
+      "tactile-feedback": {
+        date: "April 02, 2026",
+        title: "Tactile Feedback",
+        body: `<p>We touch glass all day. The smooth, cold, perfectly flat surface of a phone screen or tablet is the primary texture of modern life. And yet the interfaces displayed on that glass do nothing to acknowledge the physical reality of the touch. A button on screen feels exactly like empty space — the same temperature, the same resistance, the same nothing.</p>
                 <p>Haptic feedback is beginning to change this. Modern devices can vibrate with enough precision to simulate texture, edges, and resistance. A well-implemented haptic response makes a button feel like it has depth — you feel the moment of engagement, the travel, and the bottom of the click.</p>
                 <p>But haptics are only half the equation. The visual response must match the physical sensation. If a button vibrates like it is being pressed 3mm into the screen, the visual animation must show exactly 3mm of depression, with shadows and highlights adjusting to match the new depth. Any mismatch between what you feel and what you see creates cognitive dissonance that breaks the illusion.</p>
-                <p>Micro-animations are the key to this synchronization. A 150ms spring-damped scale animation, perfectly timed to the haptic pulse, creates a moment of genuine tactile satisfaction that no amount of visual polish alone can achieve.</p>`
-            },
-            'designing-the-unseen': {
-                date: 'March 18, 2026',
-                title: 'Designing the Unseen',
-                body: `<p>The most important element in any design is the space between the elements. Negative space is not empty — it is the silence between notes that gives music its rhythm, the pause between sentences that gives prose its pace. Without it, design becomes noise.</p>
+                <p>Micro-animations are the key to this synchronization. A 150ms spring-damped scale animation, perfectly timed to the haptic pulse, creates a moment of genuine tactile satisfaction that no amount of visual polish alone can achieve.</p>`,
+      },
+      "designing-the-unseen": {
+        date: "March 18, 2026",
+        title: "Designing the Unseen",
+        body: `<p>The most important element in any design is the space between the elements. Negative space is not empty — it is the silence between notes that gives music its rhythm, the pause between sentences that gives prose its pace. Without it, design becomes noise.</p>
                 <p>Premium interfaces are defined more by what they remove than by what they add. Every element that appears on screen should justify its existence. Every pixel of spacing should be intentional. Every absence should be felt as a deliberate choice rather than an oversight.</p>
                 <p>In glass-morphism designs, negative space takes on a literal transparency. The space around and between glass elements is not filled with a background color — it is a window through to whatever lies beneath. This creates a design that is simultaneously full and empty, present and absent.</p>
-                <p>The discipline of designing the unseen requires a fundamental shift in perspective. Instead of asking "what should I add here?" the designer asks "what can I remove?" Instead of filling space with content, they allow space to define the boundaries of content. The result is an interface that breathes — that gives the user room to think, to absorb, to be present with the content rather than overwhelmed by it.</p>`
-            }
-        };
+                <p>The discipline of designing the unseen requires a fundamental shift in perspective. Instead of asking "what should I add here?" the designer asks "what can I remove?" Instead of filling space with content, they allow space to define the boundaries of content. The result is an interface that breathes — that gives the user room to think, to absorb, to be present with the content rather than overwhelmed by it.</p>`,
+      },
+    };
 
-        // =========================================================================
-        //  LOAD STORY CONTENT
-        // =========================================================================
-        const params = new URLSearchParams(window.location.search);
-        const slug = params.get('slug');
+    // =========================================================================
+    //  LOAD STORY CONTENT
+    // =========================================================================
+    const params = new URLSearchParams(window.location.search);
+    const slug = params.get("slug");
 
-        if (slug && stories[slug]) {
-            const story = stories[slug];
-            document.getElementById('story-date').textContent = story.date;
-            document.getElementById('story-title').textContent = story.title;
-            document.getElementById('story-body').innerHTML = story.body;
-            document.title = `${story.title} — Tactile Blog`;
-        } else {
-            document.getElementById('story-title').textContent = 'Story Not Found';
-            document.getElementById('story-body').innerHTML = '<p>The requested story could not be found. <a href="index.html">Return to home</a>.</p>';
-        }
+    if (slug && stories[slug]) {
+      const story = stories[slug];
+      document.getElementById("story-date").textContent = story.date;
+      document.getElementById("story-title").textContent = story.title;
+      document.getElementById("story-body").innerHTML = story.body;
+      document.title = `${story.title} — Tactile Blog`;
+    } else {
+      document.getElementById("story-title").textContent = "Story Not Found";
+      document.getElementById("story-body").innerHTML =
+        '<p>The requested story could not be found. <a href="index.html">Return to home</a>.</p>';
+    }
 
-        // =========================================================================
-        //  ENTRY ANIMATION — Glass overlay shrinks away to reveal content
-        //  On page load, if we came from index.html via card expansion,
-        //  show a full-screen glass overlay that fades/shrinks to nothing.
-        // =========================================================================
-        const cameFromCard = sessionStorage.getItem('expanding-card-index');
-        if (cameFromCard !== null) {
-            // Don't clear yet — we need it for the back animation
-            const overlay = document.createElement('div');
-            overlay.classList.add('glass-transition-overlay');
-            overlay.style.filter = 'none';
-            document.body.appendChild(overlay);
+    // =========================================================================
+    //  ENTRY ANIMATION — Glass overlay shrinks away to reveal content
+    //  On page load, if we came from index.html via card expansion,
+    //  show a full-screen glass overlay that fades/shrinks to nothing.
+    // =========================================================================
+    const cameFromCard = sessionStorage.getItem("expanding-card-index");
+    if (cameFromCard !== null) {
+      // Don't clear yet — we need it for the back animation
+      const overlay = document.createElement("div");
+      overlay.classList.add("glass-transition-overlay");
+      overlay.style.filter = "none";
+      document.body.appendChild(overlay);
 
-            // Animate overlay fading away to reveal the content beneath
-            gsap.to(overlay, {
-                opacity: 0,
-                duration: 0.5,
-                delay: 0.1,
-                ease: "power2.out",
-                onComplete: () => overlay.remove()
-            });
-        }
+      // Animate overlay fading away to reveal the content beneath
+      gsap.to(overlay, {
+        opacity: 0,
+        duration: 0.5,
+        delay: 0.1,
+        ease: "power2.out",
+        onComplete: () => overlay.remove(),
+      });
+    }
 
-        // =========================================================================
-        //  BACK BUTTON — Reverse glass expansion animation
-        //  Creates a glass overlay that grows from nothing to cover the viewport,
-        //  then navigates back to index.html with a flag so it plays the shrink.
-        // =========================================================================
-        document.getElementById('back-btn').addEventListener('click', (e) => {
-            e.preventDefault();
-            // Instant navigation back
-            sessionStorage.setItem('returning-from-story', 'true');
-            window.location.href = 'index.html';
-        });
-    </script>
+    // =========================================================================
+    //  BACK BUTTON — Reverse glass expansion animation
+    //  Creates a glass overlay that grows from nothing to cover the viewport,
+    //  then navigates back to index.html with a flag so it plays the shrink.
+    // =========================================================================
+    document.getElementById("back-btn").addEventListener("click", (e) => {
+      e.preventDefault();
+      // Instant navigation back
+      sessionStorage.setItem("returning-from-story", "true");
+      window.location.href = "index.html";
+    });
+
+    // =========================================================================
+    //  FLOAT PHYSICS FOR POLAROIDS
+    // =========================================================================
+    const polaroids = document.querySelectorAll(".polaroid-wrapper");
+
+    polaroids.forEach((wrapper, i) => {
+      const inner = wrapper.querySelector(".polaroid");
+
+      // Floating animation removed per user request
+
+      // Hover effect to bring to center smoothly - optional, but let's just use CSS scale + shadow
+      // Instead of jumping in JS, CSS transition handles the scale. Let GSAP handle the float.
+
+      // Click to open modal
+      wrapper.addEventListener("click", () => {
+        const title = wrapper.getAttribute("data-title");
+        const text = wrapper.getAttribute("data-text");
+        const img = wrapper.getAttribute("data-img");
+
+        document.getElementById("modal-img").src = img;
+        document.getElementById("modal-title").textContent = title;
+        document.getElementById("modal-text").textContent = text;
+
+        const modal = document.getElementById("polaroid-modal");
+        modal.classList.add("active");
+      });
+    });
+
+    // =========================================================================
+    //  POLAROID MODAL CONTROLS
+    // =========================================================================
+    const modal = document.getElementById("polaroid-modal");
+    const modalBackdrop = document.getElementById("modal-backdrop");
+    const modalClose = document.getElementById("modal-close");
+
+    function closeModal() {
+      modal.classList.remove("active");
+    }
+
+    modalClose.addEventListener("click", closeModal);
+    modalBackdrop.addEventListener("click", closeModal);
+  </script>
 </body>
 
 </html>
