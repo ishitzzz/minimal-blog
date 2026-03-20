@@ -419,25 +419,15 @@
         document.getElementById('back-btn').addEventListener('click', (e) => {
             e.preventDefault();
 
-            // Create exit overlay — starts FULLY OPAQUE immediately (no fade-in)
-            // This eliminates the white flash between content disappearing and overlay appearing
-            const overlay = document.createElement('div');
-            overlay.classList.add('glass-exit-overlay');
-            overlay.style.opacity = '1';  // Visible from frame 1
-            overlay.style.background = 'rgba(230, 228, 222, 0.95)';  // Solid, no backdrop-filter
-            document.body.appendChild(overlay);
-
-            // Fade content out behind the overlay
-            gsap.to('.story-container', {
+            // Minimal transition: fade out entire page
+            gsap.to(document.body, {
                 opacity: 0,
-                duration: 0.2,
-                ease: "power2.in"
-            });
-
-            // Navigate back quickly — overlay is already covering everything
-            gsap.delayedCall(0.25, () => {
-                sessionStorage.setItem('returning-from-story', 'true');
-                window.location.href = 'index.html';
+                duration: 0.3,
+                ease: "power2.inOut",
+                onComplete: () => {
+                    sessionStorage.setItem('returning-from-story', 'true');
+                    window.location.href = 'index.html';
+                }
             });
         });
     </script>

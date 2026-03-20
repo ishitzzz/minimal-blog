@@ -5,31 +5,18 @@
 // =========================================================================
 
 // =========================================================================
-//  0. RETURNING FROM STORY — Instant full-screen glass overlay
-//     If returning from story page, create a glass overlay covering the
-//     ENTIRE viewport immediately. The user sees only glass from frame 1.
-//     The actual shrink animation happens after ScrollTrigger is ready.
+//  0. RETURNING FROM STORY — Minimal Fade Transition
+//     If returning from story page, the page starts faded out and fades in.
 // =========================================================================
 const _isReturning = sessionStorage.getItem('returning-from-story');
 const _returnCardIndex = sessionStorage.getItem('expanding-card-index');
-let _returnOverlay = null;
 
 if (_isReturning && _returnCardIndex !== null) {
     sessionStorage.removeItem('returning-from-story');
     sessionStorage.removeItem('expanding-card-index');
 
-    // Create full-screen SOLID overlay covering everything from frame 1.
-    // Uses solid color instead of backdrop-filter for instant render (~0ms).
-    // Backdrop-filter costs ~15ms on first paint and causes the white flash.
-    _returnOverlay = document.createElement('div');
-    _returnOverlay.style.cssText = `
-        position: fixed;
-        inset: 0;
-        z-index: 99999;
-        background: rgba(230, 228, 222, 0.95);
-        pointer-events: none;
-    `;
-    document.body.appendChild(_returnOverlay);
+    // Start with opacity 0
+    document.body.style.opacity = '0';
 }
 
 // Initialize Lucide Icons
@@ -477,72 +464,24 @@ let st = ScrollTrigger.create({
 // =========================================================================
 //  9b. REVERSE ANIMATION — Scale-based shrink from viewport to card
 // =========================================================================
-if (_returnOverlay && _returnCardIndex !== null) {
+// 9b. If returning from story, handle the minimal fade-in
+if (_isReturning && _returnCardIndex !== null) {
     const targetIdx = parseInt(_returnCardIndex);
 
-    // Scroll to the correct card position instantly (solid overlay covers everything)
+    // Scroll to the correct card position instantly
     const targetProgress = targetIdx / (totalCards - 1);
     const scrollPos = st.start + targetProgress * (st.end - st.start);
     window.scrollTo(0, scrollPos);
-    lenis.stop();
-
+    
     // Force the card stack to render at this card
     renderStack(targetIdx);
 
-    // Wait 1 frame for layout (solid overlay is faster than backdrop-filter)
-    requestAnimationFrame(() => {
-        const targetCard = cards[targetIdx];
-        if (!targetCard) { _returnOverlay.remove(); lenis.start(); return; }
-
-        const rect = targetCard.getBoundingClientRect();
-        const cardCenterX = rect.left + rect.width / 2;
-        const cardCenterY = rect.top + rect.height / 2;
-        const vpCenterX = viewW / 2;
-        const vpCenterY = viewH / 2;
-
-        // Reshape overlay from full-screen to card-sized
-        _returnOverlay.style.inset = 'auto';
-        _returnOverlay.style.top = rect.top + 'px';
-        _returnOverlay.style.left = rect.left + 'px';
-        _returnOverlay.style.width = rect.width + 'px';
-        _returnOverlay.style.height = rect.height + 'px';
-        _returnOverlay.style.borderRadius = 'var(--glass-radius)';
-        _returnOverlay.style.transformOrigin = 'center center';
-
-        // Scale so it still covers the viewport
-        const scaleX = viewW / rect.width;
-        const scaleY = viewH / rect.height;
-        const startScale = Math.max(scaleX, scaleY) * 1.05;
-        const translateX = vpCenterX - cardCenterX;
-        const translateY = vpCenterY - cardCenterY;
-
-        gsap.set(_returnOverlay, {
-            scale: startScale,
-            x: translateX,
-            y: translateY,
-        });
-
-        // Shrink from viewport to card position (faster with solid overlay)
-        gsap.to(_returnOverlay, {
-            scale: 1,
-            x: 0,
-            y: 0,
-            duration: 0.7,
-            ease: 'power3.inOut',
-            force3D: true,
-            onComplete: () => {
-                gsap.to(_returnOverlay, {
-                    opacity: 0,
-                    duration: 0.25,
-                    ease: 'power2.out',
-                    onComplete: () => {
-                        _returnOverlay.remove();
-                        _returnOverlay = null;
-                        lenis.start();
-                    }
-                });
-            }
-        });
+    // Simple fade in
+    gsap.to(document.body, {
+        opacity: 1,
+        duration: 0.5,
+        ease: 'power2.inOut',
+        clearProps: 'opacity'
     });
 }
 
@@ -561,16 +500,10 @@ downArrow.addEventListener('click', () => {
 });
 
 // =========================================================================
-// 11. CARD EXPAND → STORY PAGE TRANSITION — PHANTOM OVERLAY
-//     Instead of reparenting the real card (which causes layout thrash),
-//     we use a pre-existing lightweight phantom overlay at body level.
-//     The phantom has NO backdrop-filter or SVG filter — just a solid
-//     semi-transparent background. Glass is imperceptible during fast motion.
+// 11. CARD EXPAND → STORY PAGE TRANSITION — MINIMAL FADE
+//     Super lightweight transition. Just fades out the page and navigates.
+//     No expensive scale animations, no backdrop-filter resizing.
 // =========================================================================
-const expansionPhantom = document.getElementById('expansion-phantom');
-const stickySection = document.querySelector('.sticky-card-section');
-const siteHeader = document.querySelector('.site-header');
-
 document.querySelectorAll('[data-action="read-story"]').forEach(btn => {
     btn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -579,79 +512,19 @@ document.querySelectorAll('[data-action="read-story"]').forEach(btn => {
         const card = btn.closest('.post');
         const storySlug = card.dataset.story;
         const cardIndex = card.dataset.cardIndex;
-        if (!storySlug || !expansionPhantom) return;
+        if (!storySlug) return;
 
-        // Capture card position BEFORE anything changes
-        const rect = card.getBoundingClientRect();
-
-        // Freeze scrolling
-        lenis.stop();
-
-        // CHROME FIX: Switch header from position:fixed to position:absolute.
-        // backdrop-filter can't sample sibling position:fixed elements in Chrome.
-        // Making the header absolute lets the phantom's glass refract the "Tactile." text.
-        if (siteHeader) {
-            siteHeader.style.position = 'absolute';
-            siteHeader.style.top = (window.scrollY + parseFloat(getComputedStyle(siteHeader).top)) + 'px';
-        }
-
-        // Store which card was clicked (for reverse animation on return)
+        // Store which card was clicked (for reverse positioning on return)
         sessionStorage.setItem('expanding-card-index', cardIndex);
 
-        // Fade out text content on the real card
-        const textEls = card.querySelectorAll('.date, h2, .excerpt, .btn-standard');
-        gsap.to(textEls, {
+        // Simple fade out of the whole body
+        gsap.to(document.body, {
             opacity: 0,
-            y: -15,
-            duration: 0.25,
-            stagger: 0.02,
-            ease: "power2.in"
-        });
-
-        // After text fades, scale the PHANTOM overlay (not the real card)
-        gsap.delayedCall(0.2, () => {
-            // Position phantom exactly at the card's rect
-            expansionPhantom.style.top = rect.top + 'px';
-            expansionPhantom.style.left = rect.left + 'px';
-            expansionPhantom.style.width = rect.width + 'px';
-            expansionPhantom.style.height = rect.height + 'px';
-            expansionPhantom.style.transformOrigin = 'center center';
-
-            // Show phantom, hide real card stack (Content Visibility Isolation)
-            expansionPhantom.classList.add('is-active');
-            stickySection.classList.add('section-hidden');
-
-            // Prevent body scrollbars
-            document.body.style.overflow = 'hidden';
-
-            // Calculate scale to cover full viewport
-            const cardCenterX = rect.left + rect.width / 2;
-            const cardCenterY = rect.top + rect.height / 2;
-            const vpCenterX = viewW / 2;
-            const vpCenterY = viewH / 2;
-            const scaleX = viewW / rect.width;
-            const scaleY = viewH / rect.height;
-            const finalScale = Math.max(scaleX, scaleY) * 1.05;
-            const translateX = vpCenterX - cardCenterX;
-            const translateY = vpCenterY - cardCenterY;
-
-            // Scale phantom from card-size to fill viewport
-            // No backdrop-filter, no SVG filter = pure GPU compositor animation
-            gsap.fromTo(expansionPhantom, {
-                scale: 1,
-                x: 0,
-                y: 0,
-            }, {
-                scale: finalScale,
-                x: translateX,
-                y: translateY,
-                duration: 0.7,
-                ease: "power3.inOut",
-                force3D: true,
-                onComplete: () => {
-                    window.location.href = `story.html?slug=${storySlug}`;
-                }
-            });
+            duration: 0.3,
+            ease: "power2.inOut",
+            onComplete: () => {
+                window.location.href = `story.html?slug=${storySlug}`;
+            }
         });
     });
 });
