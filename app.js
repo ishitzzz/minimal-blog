@@ -4,6 +4,8 @@
 //  Performance: RAF-throttled updates, selective filtering, compositor-first
 // =========================================================================
 
+const API_BASE = window.API_BASE || 'http://localhost:4000';
+
 // =========================================================================
 //  0. RETURNING FROM STORY 
 // =========================================================================
@@ -17,6 +19,82 @@ if (_isReturning && _returnCardIndex !== null) {
 
 // Initialize Lucide Icons
 lucide.createIcons();
+
+// =========================================================================
+//  LOAD POSTS FROM API
+// =========================================================================
+async function loadPosts() {
+    const section = document.querySelector('.sticky-card-section');
+
+    try {
+        const res = await fetch(`${API_BASE}/api/posts`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const posts = await res.json();
+
+        if (!posts.length) return;
+
+        posts.forEach((post, index) => {
+            const article = document.createElement('article');
+            article.className = 'post glassy-effect';
+            article.dataset.cardIndex = index;
+            article.dataset.story = post.slug;
+
+            // Format date
+            const dateStr = new Date(post.date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: '2-digit',
+            });
+
+            article.innerHTML = `
+                <div class="glass-bend"></div>
+                <div class="glass-volume"></div>
+                <div class="glass-glare"></div>
+                <p class="date">${dateStr}</p>
+                <h2>${post.title}</h2>
+                <p class="excerpt">${post.excerpt || ''}</p>
+                <button class="btn-standard glassy-effect" data-action="read-story">Read Story</button>
+            `;
+
+            // Apply glass_config CSS custom properties if present
+            if (post.glass_config && typeof post.glass_config === 'object') {
+                for (const [key, value] of Object.entries(post.glass_config)) {
+                    // Convert snake_case keys to --kebab-case custom properties
+                    const prop = '--' + key.replace(/_/g, '-');
+                    article.style.setProperty(prop, value);
+                }
+            }
+
+            section.appendChild(article);
+        });
+    } catch (err) {
+        console.error('[loadPosts]', err);
+        // Fallback article so the page doesn't break silently
+        const fallback = document.createElement('article');
+        fallback.className = 'post glassy-effect';
+        fallback.dataset.cardIndex = '0';
+        fallback.dataset.story = '';
+        fallback.innerHTML = `
+            <div class="glass-bend"></div>
+            <div class="glass-volume"></div>
+            <div class="glass-glare"></div>
+            <p class="date">&mdash;</p>
+            <h2>Could not load posts</h2>
+            <p class="excerpt">The server may be unavailable. Please try again later.</p>
+        `;
+        section.appendChild(fallback);
+    }
+}
+
+// =========================================================================
+//  MAIN INITIALIZATION — wait for DOM + posts, then run all setup
+// =========================================================================
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadPosts();
+    initializeApp();
+});
+
+function initializeApp() {
 
 // =========================================================================
 //  1. SMOOTH SCROLLING (Lenis)
@@ -490,23 +568,25 @@ downArrow.addEventListener('click', () => {
 // =========================================================================
 // 11. CARD EXPAND → STORY PAGE TRANSITION
 //     Instant navigation, no animations.
+//     Uses event delegation so dynamically-created buttons work.
 // =========================================================================
-document.querySelectorAll('[data-action="read-story"]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+document.querySelector('.sticky-card-section').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action="read-story"]');
+    if (!btn) return;
 
-        const card = btn.closest('.post');
-        const storySlug = card.dataset.story;
-        const cardIndex = card.dataset.cardIndex;
-        if (!storySlug) return;
+    e.preventDefault();
+    e.stopPropagation();
 
-        // Store which card was clicked (for reverse positioning on return)
-        sessionStorage.setItem('expanding-card-index', cardIndex);
+    const card = btn.closest('.post');
+    const storySlug = card.dataset.story;
+    const cardIndex = card.dataset.cardIndex;
+    if (!storySlug) return;
 
-        // Instant navigation
-        window.location.href = `story.html?slug=${storySlug}`;
-    });
+    // Store which card was clicked (for reverse positioning on return)
+    sessionStorage.setItem('expanding-card-index', cardIndex);
+
+    // Instant navigation
+    window.location.href = `story.html?slug=${storySlug}`;
 });
 
 
@@ -533,3 +613,4 @@ window.addEventListener('resize', () => {
     }, 250);
 }, { passive: true });
 
+} // end initializeApp

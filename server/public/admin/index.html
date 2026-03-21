@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tactile — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
+  <style>
+    /* ═══════════════════════════════════════════════════════
+       RESET & BASE
+       ═══════════════════════════════════════════════════════ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:        #0a0a0a;
+      --surface:   #141414;
+      --surface-2: #1e1e1e;
+      --border:    #2a2a2a;
+      --text:      #e8e8e8;
+      --text-dim:  #888;
+      --accent:    #c9a96e;
+      --green:     #4ade80;
+      --red:       #f87171;
+      --radius:    8px;
+      --font:      'Special Elite', monospace;
+    }
+
+    body {
+      height: 100vh;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow: hidden; /* App shell */
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       LOGIN
+       ═══════════════════════════════════════════════════════ */
+    .login-screen {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 20px;
+    }
+    .login-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 48px 40px; width: 100%; max-width: 380px; text-align: center;
+    }
+    .login-box h1 { font-size: 2rem; margin-bottom: 8px; color: var(--accent); font-weight: normal; }
+    .login-box p { color: var(--text-dim); font-size: 0.9rem; margin-bottom: 32px; }
+    .login-box input[type="password"] {
+      width: 100%; padding: 14px 18px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text); font-family: var(--font); font-size: 1rem;
+      outline: none; transition: border-color 0.2s;
+    }
+    .login-box input[type="password"]:focus { border-color: var(--accent); }
+    .login-box .login-btn {
+      width: 100%; margin-top: 16px; padding: 14px; background: var(--accent);
+      color: var(--bg); border: none; border-radius: var(--radius); font-family: var(--font);
+      font-size: 1rem; cursor: pointer; transition: opacity 0.2s;
+    }
+    .login-box .login-btn:hover { opacity: 0.85; }
+    .login-error { color: var(--red); font-size: 0.85rem; margin-top: 14px; min-height: 1.2em; }
+
+    /* ═══════════════════════════════════════════════════════
+       DASHBOARD SHELL
+       ═══════════════════════════════════════════════════════ */
+    .dashboard { display: none; height: 100vh; flex-direction: column; }
+    .dashboard.active { display: flex; }
+
+    .top-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 32px; background: var(--surface); border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .top-bar-left { display: flex; align-items: center; gap: 32px; }
+    .top-bar .brand { font-size: 1.3rem; color: var(--accent); text-decoration: none; }
+    .top-bar nav { display: flex; gap: 4px; }
+    .top-bar nav button {
+      background: transparent; border: 1px solid transparent; color: var(--text-dim);
+      font-family: var(--font); font-size: 0.95rem; padding: 8px 18px; border-radius: var(--radius);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .top-bar nav button:hover { color: var(--text); }
+    .top-bar nav button.active { color: var(--text); background: var(--surface-2); border-color: var(--border); }
+    
+    .logout-btn {
+      background: transparent; border: 1px solid var(--border); color: var(--text-dim);
+      font-family: var(--font); font-size: 0.85rem; padding: 8px 20px; border-radius: var(--radius); cursor: pointer;
+    }
+    .logout-btn:hover { color: var(--red); border-color: var(--red); }
+
+    .content-area { flex: 1; overflow-y: auto; }
+    
+    /* ═══════════════════════════════════════════════════════
+       VIEWS
+       ═══════════════════════════════════════════════════════ */
+    .view { display: none; height: 100%; }
+    .view.active { display: block; }
+
+    /* For normal views (posts, analytics) */
+    .container { max-width: 1000px; margin: 0 auto; padding: 40px 32px; }
+    
+    .view-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+    .view-header h2 { font-size: 1.5rem; font-weight: normal; }
+
+    /* ═══════════════════════════════════════════════════════
+       BUTTONS
+       ═══════════════════════════════════════════════════════ */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px;
+      border-radius: var(--radius); font-family: var(--font); font-size: 0.9rem;
+      cursor: pointer; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); transition: all 0.15s;
+    }
+    .btn:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-accent { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+    .btn-accent:hover { opacity: 0.85; color: var(--bg); }
+    .btn-sm { padding: 6px 14px; font-size: 0.8rem; }
+    .btn-danger:hover { border-color: var(--red); color: var(--red); }
+
+    /* ═══════════════════════════════════════════════════════
+       POSTS TABLE
+       ═══════════════════════════════════════════════════════ */
+    .posts-table { width: 100%; border-collapse: collapse; }
+    .posts-table th, .posts-table td { text-align: left; padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    .posts-table th { color: var(--text-dim); font-weight: normal; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
+    .posts-table tr:hover td { background: var(--surface); }
+    .badge { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .badge-green { background: rgba(74, 222, 128, 0.15); color: var(--green); }
+    .badge-red   { background: rgba(248, 113, 113, 0.15); color: var(--red); }
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-dim); }
+
+    /* ═══════════════════════════════════════════════════════
+       EDITOR VIEW (3-pane layout)
+       ═══════════════════════════════════════════════════════ */
+    #view-editor.active { display: flex; flex-direction: column; }
+    
+    .editor-layout { display: flex; flex: 1; height: calc(100vh - 70px); overflow: hidden; }
+    
+    /* 1. Sidebar */
+    .editor-sidebar {
+      width: 320px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    }
+    .sidebar-inner { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+    .sidebar-footer { padding: 16px 24px; background: var(--surface-2); border-top: 1px solid var(--border); display: flex; gap: 10px; }
+    .sidebar-footer .btn { flex: 1; justify-content: center; }
+
+    .form-group label { display: block; color: var(--text-dim); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .form-group input, .form-group textarea {
+      width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text); font-family: var(--font); font-size: 0.9rem; outline: none;
+    }
+    .form-group input:focus, .form-group textarea:focus { border-color: var(--accent); }
+    
+    .glass-settings { border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; background: var(--bg); }
+    .glass-settings summary { font-size: 0.85rem; color: var(--accent); cursor: pointer; user-select: none; font-weight: bold; }
+    .glass-settings .sliders { margin-top: 16px; display: flex; flex-direction: column; gap: 12px; }
+    
+    .slider-row { display: flex; flex-direction: column; gap: 4px; }
+    .slider-row label { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-dim); }
+    .slider-row input[type=range] { width: 100%; cursor: pointer; }
+    .slider-row input[type=text] { padding: 4px 8px; font-size: 0.8rem; margin-top: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+
+    /* 2. Canvas */
+    .editor-canvas-pane { flex: 1; display: flex; flex-direction: column; background: var(--bg); position: relative; }
+    .canvas-header { padding: 12px 24px; display: flex; justify-content: flex-end; align-items: center; border-bottom: 1px solid var(--border); }
+    .save-status { color: var(--text-dim); font-size: 0.85rem; }
+    .save-status.saving { color: var(--accent); animation: pulse 1s infinite alternate; }
+
+    .canvas-body-wrap { flex: 1; overflow-y: auto; padding: 40px 60px; padding-bottom: 200px; }
+    .canvas-body {
+      font-family: var(--font); font-size: 1.25rem; line-height: 1.8; color: var(--text);
+      max-width: 680px; margin: 0 auto; outline: none; min-height: 100%; white-space: pre-wrap;
+    }
+    .canvas-body[placeholder]:empty:before { content: attr(placeholder); color: var(--text-dim); pointer-events: none; }
+    .canvas-body p { margin-bottom: 1.5em; }
+    .canvas-body figure { margin: 2em 0; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; background: var(--surface); }
+    .canvas-body img { max-width: 100%; display: block; }
+    .canvas-body hr { border: none; border-top: 2px solid var(--border); margin: 2em 0; }
+
+    /* 3. Preview */
+    .editor-layout.hide-canvas .editor-canvas-pane { display: none; }
+    .editor-layout.hide-canvas .editor-preview-pane { width: 100%; border-left: none; }
+    .editor-preview-pane { width: 45%; border-left: 1px solid var(--border); background: #000; position: relative; display: flex; flex-direction: column; transition: width 0.3s ease; }
+    .preview-iframe { flex: 1; border: none; width: 100%; height: 100%; background: #e8e0d4; pointer-events: auto; }
+
+    /* Popovers */
+    .bubble-toolbar {
+      position: absolute; display: none; background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 4px; gap: 4px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 100; align-items: center; left: 0; top: 0;
+    }
+    .bubble-toolbar button { background: transparent; color: var(--text); border: none; padding: 6px 12px; cursor: pointer; border-radius: 4px; font-family: var(--font); font-size: 0.9rem; }
+    .bubble-toolbar button:hover { background: var(--surface); color: var(--accent); }
+
+    .slash-menu {
+      position: absolute; display: none; background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 6px; width: 220px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 100; flex-direction: column; padding: 6px 0; left: 0; top: 0;
+    }
+    .slash-menu .menu-item { padding: 10px 16px; cursor: pointer; color: var(--text); font-size: 0.9rem; }
+    .slash-menu .menu-item:hover, .slash-menu .menu-item.active { background: var(--surface); color: var(--accent); }
+
+    /* Modals */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; z-index: 200; align-items: center; justify-content: center; backdrop-filter: blur(4px);
+    }
+    .modal-content {
+      background: var(--surface); border: 1px solid var(--border); padding: 24px; border-radius: 12px; width: 80vw; max-width: 900px; max-height: 85vh; display: flex; flex-direction: column;
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-header h3 { font-size: 1.2rem; font-weight: normal; }
+    .btn-close { background: transparent; color: var(--text-dim); border: none; font-size: 1.5rem; cursor: pointer; line-height: 1; }
+    .btn-close:hover { color: var(--text); }
+    
+    .image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; overflow-y: auto; flex: 1; margin-bottom: 20px; min-height: 300px;}
+    .image-item { width: 100%; aspect-ratio: 1; object-fit: cover; cursor: pointer; border: 2px solid transparent; border-radius: 4px; background: var(--bg); transition: transform 0.1s; }
+    .image-item:hover { border-color: var(--accent); transform: scale(1.02); }
+
+    .polaroid-settings { display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; }
+    
+    /* ═══════════════════════════════════════════════════════
+       ANALYTICS
+       ═══════════════════════════════════════════════════════ */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 40px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+    .stat-card .stat-value { font-size: 2.2rem; color: var(--accent); }
+    .stat-card .stat-label { color: var(--text-dim); font-size: 0.85rem; margin-top: 4px; }
+    .list-section { margin-bottom: 36px; }
+    .list-section h3 { font-weight: normal; font-size: 1.1rem; margin-bottom: 14px; color: var(--text-dim); }
+    .list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    .list-item:first-child { border-top: 1px solid var(--border); }
+    .list-item .count { color: var(--accent); font-size: 0.85rem; }
+
+    /* ═══════════════════════════════════════════════════════
+       LOADING
+       ═══════════════════════════════════════════════════════ */
+    .loading { text-align: center; padding: 40px; color: var(--text-dim); }
+    @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+    .loading-dot { animation: pulse 1.2s ease-in-out infinite; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" class="login-screen">
+  <div class="login-box">
+    <h1>Tactile.</h1>
+    <p>Admin Dashboard</p>
+    <form id="login-form">
+      <input type="password" id="login-password" placeholder="Password" required />
+      <button type="submit" class="login-btn">Enter</button>
+    </form>
+    <p class="login-error" id="login-error"></p>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="dashboard">
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <span class="brand">Tactile.</span>
+      <nav>
+        <button class="nav-btn active" data-view="posts">Posts</button>
+        <button class="nav-btn" data-view="analytics">Analytics</button>
+      </nav>
+    </div>
+    <button class="logout-btn" id="logout-btn">Log Out</button>
+  </div>
+
+  <div class="content-area" id="content-area">
+    <!-- POSTS VIEW -->
+    <div id="view-posts" class="view active">
+      <div class="container">
+        <div class="view-header">
+          <h2>Posts</h2>
+          <button class="btn btn-accent" onclick="openEditor()">+ New Post</button>
+        </div>
+        <div id="posts-table-wrap"></div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS VIEW -->
+    <div id="view-analytics" class="view">
+      <div class="container">
+        <div class="view-header"><h2>Analytics</h2></div>
+        <div id="analytics-content"></div>
+      </div>
+    </div>
+  </div><!-- /content-area -->
+
+  <!-- EDITOR VIEW -->
+  <div id="view-editor" class="view">
+    <div class="editor-layout">
+      <!-- Sidebar -->
+      <div class="editor-sidebar">
+        <div class="sidebar-inner">
+          <div class="form-group"><label>Title</label><input type="text" id="post-title" /></div>
+          <div class="form-group"><label>Date</label><input type="date" id="post-date" /></div>
+          <div class="form-group"><label>Excerpt</label><textarea id="post-excerpt" rows="3"></textarea></div>
+          
+          <details class="glass-settings" open>
+            <summary>Polaroids (<span id="pol-count">0</span>)</summary>
+            <div id="polaroids-list" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;"></div>
+          </details>
+          <details class="glass-settings" open>
+            <summary>Glass Card Properties</summary>
+            <div class="sliders">
+              <div class="slider-row">
+                <label><span>Blur Radius</span><span id="val-blur">8px</span></label>
+                <input type="range" id="sl-blur" min="0" max="40" step="1" value="8" />
+              </div>
+              <div class="slider-row">
+                <label><span>Vibrancy (Warp)</span><span id="val-vibrancy">150%</span></label>
+                <input type="range" id="sl-vibrancy" min="50" max="300" step="10" value="150" />
+              </div>
+              <div class="slider-row">
+                <label><span>Glare Opacity</span><span id="val-glare">0.15</span></label>
+                <input type="range" id="sl-glare" min="0" max="1" step="0.05" value="0.15" />
+              </div>
+              <div class="slider-row">
+                <label><span>Card Tint</span></label>
+                <input type="text" id="val-tint" value="rgba(255, 255, 255, 0.05)" />
+              </div>
+              <div class="slider-row">
+                <label><span>Bevel Light</span></label>
+                <input type="text" id="val-blight" value="rgba(255, 255, 255, 0.7)" />
+              </div>
+              <div class="slider-row">
+                <label><span>Bevel Shadow</span></label>
+                <input type="text" id="val-bshadow" value="rgba(0, 0, 0, 0.4)" />
+              </div>
+            </div>
+          </details>
+        </div>
+        <div class="sidebar-footer">
+          <button class="btn" id="btn-save-draft">Save Draft</button>
+          <button class="btn btn-accent" id="btn-publish">Publish</button>
+        </div>
+      </div>
+
+      <!-- Canvas -->
+      <div class="editor-canvas-pane">
+        <div class="canvas-header">
+          <span class="save-status" id="editor-status">Saved</span>
+        </div>
+        <div class="canvas-body-wrap" id="canvas-scroll">
+          <div id="editor-body" class="canvas-body" contenteditable="true" placeholder="Start typing... Use '/' for commands"></div>
+        </div>
+        
+        <!-- Image Settings Mini-Toolbar -->
+        <div id="image-toolbar" class="bubble-toolbar" style="flex-direction: column; gap: 8px; padding: 12px; width: 220px;">
+           <label style="font-size:0.75rem; color:var(--text-dim); display:flex; justify-content:space-between; width:100%">Size <span id="lbl-img-size">100%</span></label>
+           <input type="range" id="img-sl-size" min="20" max="100" step="5" style="width:100%; cursor:pointer;" />
+
+           <label style="font-size:0.75rem; color:var(--text-dim); display:flex; justify-content:space-between; width:100%">Texture Strength <span id="lbl-img-intensity">0.85</span></label>
+           <input type="range" id="img-sl-intensity" min="0" max="1.5" step="0.05" style="width:100%; cursor:pointer;" />
+
+           <label style="font-size:0.75rem; color:var(--text-dim); display:flex; justify-content:space-between; width:100%">Corner Rounding <span id="lbl-img-radius">0px</span></label>
+           <input type="range" id="img-sl-radius" min="0" max="40" step="2" style="width:100%; cursor:pointer;" />
+           
+           <button class="btn btn-sm btn-danger" id="btn-delete-img" style="width:100%; margin-top: 4px; display:inline-flex; justify-content:center;">Delete Image</button>
+        </div>
+        
+        <!-- Bubble Toolbar -->
+        <div id="bubble-toolbar" class="bubble-toolbar">
+          <button data-cmd="bold">B</button>
+          <button data-cmd="italic">I</button>
+          <button data-cmd="createLink">Link</button>
+        </div>
+
+        <!-- Slash command -->
+        <div id="slash-menu" class="slash-menu">
+          <div class="menu-item" data-action="image">📷 Insert Image</div>
+          <div class="menu-item" data-action="polaroid">🖼️ Insert Polaroid</div>
+          <div class="menu-item" data-action="divider">➖ Insert Divider</div>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div class="editor-preview-pane" id="preview-pane">
+        <button class="btn btn-sm" id="btn-toggle-preview" style="position: absolute; top: 16px; right: 16px; z-index: 10; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: #fff; backdrop-filter: blur(4px);">Fullscreen Preview</button>
+        <iframe id="preview-iframe" class="preview-iframe"></iframe>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- IMAGE MODAL (used for inserting inline images AND polaroids) -->
+<div class="modal-overlay" id="image-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="image-modal-title">Select Image</h3>
+      <button class="btn-close" onclick="closeImageModal()">×</button>
+    </div>
+    <div style="display:flex; justify-content:flex-end;">
+      <input type="file" id="upload-input" accept="image/*" style="display:none" />
+      <button class="btn btn-sm" onclick="document.getElementById('upload-input').click()">Upload New</button>
+    </div>
+    <div class="image-grid" id="image-grid"></div>
+    
+    <!-- Polaroid config (only visible when action=polaroid) -->
+    <div id="polaroid-config" style="display:none;" class="polaroid-settings">
+      <div class="form-group"><label>Title</label><input type="text" id="pol-title"/></div>
+      <div class="form-group"><label>Text (Back of polaroid)</label><textarea id="pol-body" rows="2"></textarea></div>
+      <button class="btn btn-accent" style="align-self: flex-start" id="btn-add-polaroid">Add Polaroid</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = window.location.origin;
+const FRONTEND_URL = 'http://127.0.0.1:5500/story.html?preview=true'; 
+const TOKEN_KEY = 'tactile_admin_token';
+
+function getToken() { return localStorage.getItem(TOKEN_KEY); }
+function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
+function clearToken() { localStorage.removeItem(TOKEN_KEY); }
+
+function authHeaders() { return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` }; }
+
+async function api(path, opts = {}) {
+  const isUpload = opts.body instanceof FormData;
+  const headers = authHeaders();
+  if (isUpload) delete headers['Content-Type']; // let browser set multipart/form-data
+  
+  const res = await fetch(`${API}${path}`, {
+    ...opts, headers: { ...headers, ...(opts.headers || {}) },
+  });
+  if (res.status === 401) { clearToken(); render(); throw new Error('Unauthorized'); }
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+let currentView = 'posts';
+function render() {
+  const loggedIn = !!getToken();
+  document.getElementById('login-screen').style.display = loggedIn ? 'none' : 'flex';
+  document.getElementById('dashboard').classList.toggle('active', loggedIn);
+  if (loggedIn) switchView(currentView);
+}
+
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => { currentView = btn.dataset.view; switchView(currentView); });
+});
+
+function switchView(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(`view-${view}`).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  
+  // App shell scrolling only applies outside editor
+  document.body.style.overflow = view === 'editor' ? 'hidden' : 'auto';
+  
+  if (view === 'posts') loadPostsTable();
+  if (view === 'analytics') loadAnalytics();
+}
+
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const password = document.getElementById('login-password').value;
+  try {
+    const res = await fetch(`${API}/api/admin/login`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ password }) });
+    if (!res.ok) { document.getElementById('login-error').textContent = 'Incorrect password'; return; }
+    const { token } = await res.json();
+    setToken(token);
+    document.getElementById('login-password').value = '';
+    render();
+  } catch(err) { document.getElementById('login-error').textContent = 'Connection error'; }
+});
+
+document.getElementById('logout-btn').addEventListener('click', () => { clearToken(); render(); });
+
+// ── Posts View ────────────────────────
+async function loadPostsTable() {
+  const wrap = document.getElementById('posts-table-wrap');
+  wrap.innerHTML = '<p class="loading"><span class="loading-dot">Loading posts...</span></p>';
+  try {
+    const posts = await api('/api/admin/posts');
+    if (!posts.length) { wrap.innerHTML = '<div class="empty-state">No posts yet.</div>'; return; }
+    let html = `<table class="posts-table"><thead><tr><th>Title</th><th>Date</th><th>Status</th><th>Views</th><th>Actions</th></tr></thead><tbody>`;
+    for (const post of posts) {
+      const date = new Date(post.date).toLocaleDateString('en-US');
+      const badge = post.published ? '<span class="badge badge-green">Published</span>' : '<span class="badge badge-red">Draft</span>';
+      html += `<tr>
+        <td>${escHtml(post.title)}</td><td style="color:var(--text-dim)">${date}</td><td>${badge}</td><td style="color:var(--text-dim)">${post.view_count||0}</td>
+        <td>
+          <button class="btn btn-sm" onclick="openEditor('${post.id}')">Edit</button>
+          <button class="btn btn-sm" onclick="togglePublish('${post.id}',${post.published})">${post.published?'Unpublish':'Publish'}</button>
+          <button class="btn btn-sm btn-danger" onclick="deletePost('${post.id}')">Delete</button>
+        </td>
+      </tr>`;
+    }
+    wrap.innerHTML = html + '</tbody></table>';
+  } catch(err) {}
+}
+
+function escHtml(s) { const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+async function togglePublish(id, isP) { await api(`/api/admin/posts/${id}/${isP?'unpublish':'publish'}`, {method:'PATCH'}); loadPostsTable(); }
+async function deletePost(id) { if(confirm("Delete this post?")) { await api(`/api/admin/posts/${id}`, {method:'DELETE'}); loadPostsTable(); } }
+
+// ── Analytics View ────────────────────
+async function loadAnalytics() {
+  const wrap = document.getElementById('analytics-content');
+  wrap.innerHTML = '<p class="loading"><span class="loading-dot">Loading...</span></p>';
+  try {
+    const data = await api('/api/admin/analytics/overview');
+    let html = `<div class="stats-grid">
+      <div class="stat-card"><div class="stat-value">${data.total_sessions}</div><div class="stat-label">Total Sessions</div></div>
+      <div class="stat-card"><div class="stat-value">${data.total_page_views}</div><div class="stat-label">Page Views</div></div>
+      <div class="stat-card"><div class="stat-value">${data.total_story_reads}</div><div class="stat-label">Story Reads</div></div>
+    </div>`;
+    wrap.innerHTML = html;
+  } catch(err) {}
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EDITOR VIEW
+// ═══════════════════════════════════════════════════════════════
+
+let editorPost = { id: null, title: '', date: '', excerpt: '', body: '', polaroids: [], glass_config: {} };
+let editorDirty = false;
+
+async function openEditor(postId = null) {
+  currentView = 'editor';
+  switchView('editor');
+  
+  if (postId) {
+    setStatus('Loading...', false);
+    const posts = await api('/api/admin/posts');
+    editorPost = posts.find(p => p.id === postId) || getEmptyPost();
+  } else {
+    // Check localStorage recovery
+    const saved = localStorage.getItem('tactile_draft');
+    if (saved) {
+      if(confirm('Restore unsaved draft?')) editorPost = JSON.parse(saved);
+      else { localStorage.removeItem('tactile_draft'); editorPost = getEmptyPost(); }
+    } else {
+      editorPost = getEmptyPost();
+    }
+  }
+  
+  populateEditorUI();
+  editorDirty = false;
+  setStatus('Saved', false);
+  
+  const iframe = document.getElementById('preview-iframe');
+  if (iframe.src !== FRONTEND_URL) iframe.src = FRONTEND_URL;
+  else updatePreview();
+}
+
+function getEmptyPost() {
+  const d = new Date();
+  return { id: null, title: 'Untitled', date: d.toISOString().split('T')[0], excerpt: '', body: '', polaroids: [], glass_config: {
+    blur_radius: '8px', blur_vibrancy: '150%', glare_opacity: '0.15', card_tint: 'rgba(255, 255, 255, 0.05)', bevel_light: 'rgba(255, 255, 255, 0.7)', bevel_shadow: 'rgba(0, 0, 0, 0.4)'
+  }};
+}
+
+function parsePx(v) { return parseFloat((v||'8').replace('px','')); }
+function parsePct(v) { return parseFloat((v||'150').replace('%','')); }
+
+function renderPolaroidList() {
+  const list = document.getElementById('polaroids-list');
+  if(!list) return;
+  document.getElementById('pol-count').textContent = (editorPost.polaroids || []).length;
+  list.innerHTML = '';
+  (editorPost.polaroids || []).forEach((p, i) => {
+    const el = document.createElement('div');
+    el.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; background:var(--surface); padding:8px 12px; border-radius:4px; border:1px solid var(--border);">
+      <span style="font-size:0.8rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:140px;" title="${p.title||'Untitiled'}">${p.title||'Untitled'}</span>
+      <div style="display:flex; gap:6px;">
+        <button class="btn btn-sm" onclick="editPolaroid(${i})">Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="deletePolaroid(${i})">×</button>
+      </div>
+    </div>`;
+    list.appendChild(el);
+  });
+}
+window.deletePolaroid = function(i) {
+  if(!confirm('Delete this polaroid?')) return;
+  editorPost.polaroids.splice(i, 1);
+  renderPolaroidList(); markDirty(); updatePreview();
+};
+window.editPolaroid = function(i) {
+  openImageModal('polaroid', i);
+};
+
+function populateEditorUI() {
+  renderPolaroidList();
+  document.getElementById('post-title').value = editorPost.title || '';
+  document.getElementById('post-date').value = editorPost.date || '';
+  document.getElementById('post-excerpt').value = editorPost.excerpt || '';
+  document.getElementById('editor-body').innerHTML = editorPost.body || '<p><br></p>';
+  
+  const gc = editorPost.glass_config || {};
+  document.getElementById('sl-blur').value = parsePx(gc.blur_radius || '8px');
+  document.getElementById('sl-vibrancy').value = parsePct(gc.blur_vibrancy || '150%');
+  document.getElementById('sl-glare').value = gc.glare_opacity || '0.15';
+  document.getElementById('val-tint').value = gc.card_tint || 'rgba(255, 255, 255, 0.05)';
+  document.getElementById('val-blight').value = gc.bevel_light || 'rgba(255, 255, 255, 0.7)';
+  document.getElementById('val-bshadow').value = gc.bevel_shadow || 'rgba(0, 0, 0, 0.4)';
+  
+  updateSidebarLabels();
+}
+
+function markDirty() {
+  if(!editorDirty) { editorDirty = true; setStatus('Unsaved Changes', true); }
+}
+
+function updateStateFromUI() {
+  editorPost.title = document.getElementById('post-title').value;
+  editorPost.date = document.getElementById('post-date').value;
+  editorPost.excerpt = document.getElementById('post-excerpt').value;
+  editorPost.body = document.getElementById('editor-body').innerHTML;
+  
+  editorPost.glass_config = {
+    blur_radius: document.getElementById('sl-blur').value + 'px',
+    blur_vibrancy: document.getElementById('sl-vibrancy').value + '%',
+    glare_opacity: document.getElementById('sl-glare').value,
+    card_tint: document.getElementById('val-tint').value,
+    bevel_light: document.getElementById('val-blight').value,
+    bevel_shadow: document.getElementById('val-bshadow').value,
+  };
+}
+
+// Sliders and Inputs
+function updateSidebarLabels() {
+  document.getElementById('val-blur').textContent = document.getElementById('sl-blur').value + 'px';
+  document.getElementById('val-vibrancy').textContent = document.getElementById('sl-vibrancy').value + '%';
+  document.getElementById('val-glare').textContent = document.getElementById('sl-glare').value;
+}
+
+[ 'post-title', 'post-date', 'post-excerpt', 'sl-blur', 'sl-vibrancy', 'sl-glare', 'val-tint', 'val-blight', 'val-bshadow' ].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => { updateSidebarLabels(); markDirty(); updateStateFromUI(); updatePreview(); });
+});
+
+document.getElementById('editor-body').addEventListener('input', () => { markDirty(); updateStateFromUI(); updatePreview(); });
+
+function setStatus(text, dirty) {
+  const st = document.getElementById('editor-status');
+  st.textContent = text;
+  st.classList.toggle('saving', text === 'Saving...');
+}
+
+// ── Preview & AutoSave ────────────────
+let previewDebounce = null;
+function updatePreview() {
+  clearTimeout(previewDebounce);
+  previewDebounce = setTimeout(() => {
+    const iframe = document.getElementById('preview-iframe');
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage({ type: 'TICK', post: editorPost }, '*');
+    }
+  }, 300);
+}
+
+window.addEventListener('message', (e) => {
+  if (e.data.type === 'PREVIEW_READY') updatePreview();
+  if (e.data.type === 'POLAROID_MOVED') {
+    if(editorPost.polaroids[e.data.index]) {
+      editorPost.polaroids[e.data.index].top = e.data.top;
+      editorPost.polaroids[e.data.index].left = e.data.left;
+      markDirty(); // Need to save these changes eventually
+    }
+  }
+});
+
+// Auto save to localStorage (30s), Server (2m)
+setInterval(() => {
+  if(editorDirty && currentView === 'editor') {
+    localStorage.setItem('tactile_draft', JSON.stringify(editorPost));
+  }
+}, 30000);
+
+setInterval(async () => {
+  if(editorDirty && currentView === 'editor' && editorPost.title.trim()!=='') {
+    await performServerSave();
+  }
+}, 120000);
+
+async function performServerSave() {
+  setStatus('Saving...', false);
+  updateStateFromUI();
+  try {
+    let res;
+    if(editorPost.id) {
+      res = await api(`/api/admin/posts/${editorPost.id}`, { method: 'PATCH', body: JSON.stringify(editorPost) });
+    } else {
+      res = await api('/api/admin/posts', { method: 'POST', body: JSON.stringify(editorPost) });
+      editorPost.id = res.id;
+    }
+    editorDirty = false;
+    localStorage.removeItem('tactile_draft');
+    setStatus('Saved', false);
+    return true;
+  } catch(e) {
+    setStatus('Save Error!', true);
+    return false;
+  }
+}
+
+document.getElementById('btn-save-draft').addEventListener('click', performServerSave);
+document.getElementById('btn-publish').addEventListener('click', async () => {
+  const ok = await performServerSave();
+  if(ok && editorPost.id) {
+    await api(`/api/admin/posts/${editorPost.id}/publish`, { method: 'PATCH' });
+    setStatus('Published', false);
+  }
+});
+
+document.getElementById('btn-toggle-preview').addEventListener('click', (e) => {
+  const layout = document.querySelector('.editor-layout');
+  layout.classList.toggle('hide-canvas');
+  e.target.textContent = layout.classList.contains('hide-canvas') ? 'Exit Live Layout Mode' : 'Live Layout Mode';
+});
+
+// ── Rich Text Interactivity ───────────
+const canvas = document.getElementById('editor-body');
+const bubble = document.getElementById('bubble-toolbar');
+const slashMenu = document.getElementById('slash-menu');
+
+document.addEventListener('selectionchange', () => {
+  if (slashMenu.style.display === 'flex') return; // let user navigate slash menu
+  const sel = window.getSelection();
+  if (!sel.isCollapsed && sel.rangeCount > 0 && canvas.contains(sel.anchorNode)) {
+    const range = sel.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    const cvsRect = document.getElementById('canvas-scroll').getBoundingClientRect();
+    
+    // Position bubble just above selection
+    bubble.style.display = 'flex';
+    bubble.style.top = (rect.top - cvsRect.top + document.getElementById('canvas-scroll').scrollTop - 40) + 'px';
+    bubble.style.left = (rect.left - cvsRect.left + (rect.width/2) - (bubble.offsetWidth/2)) + 'px';
+  } else {
+    bubble.style.display = 'none';
+  }
+});
+
+bubble.addEventListener('click', (e) => {
+  if (e.target.tagName !== 'BUTTON') return;
+  e.preventDefault();
+  const cmd = e.target.dataset.cmd;
+  if(cmd === 'createLink') {
+    const url = prompt('Enter link URL:');
+    if(url) document.execCommand(cmd, false, url);
+  } else {
+    document.execCommand(cmd, false, null);
+  }
+  markDirty(); updateStateFromUI(); updatePreview();
+});
+
+// Image Bubble Toolbar
+let selectedFigure = null;
+const imgBubble = document.getElementById('image-toolbar');
+
+canvas.addEventListener('click', (e) => {
+  if (e.target.closest('#image-toolbar')) return; // ignore clicks inside popup
+  const figure = e.target.closest('figure');
+  if (figure) {
+    selectedFigure = figure;
+    const rect = figure.getBoundingClientRect();
+    const cvsRect = document.getElementById('canvas-scroll').getBoundingClientRect();
+    
+    imgBubble.style.display = 'flex';
+    imgBubble.style.top = (rect.top - cvsRect.top + document.getElementById('canvas-scroll').scrollTop - 140) + 'px';
+    imgBubble.style.left = (rect.left - cvsRect.left + (rect.width/2) - 110) + 'px';
+    
+    // Parse existing styles or fallbacks
+    let size = figure.style.getPropertyValue('--image-size').trim();
+    if (!size || size === '') size = '100%';
+    let intensity = figure.style.getPropertyValue('--texture-intensity').trim();
+    if (!intensity || intensity === '') intensity = '0.85';
+    let radius = figure.style.getPropertyValue('--image-radius').trim();
+    if (!radius || radius === '') radius = '0px';
+    
+    document.getElementById('img-sl-size').value = parseFloat(size) || 100;
+    document.getElementById('lbl-img-size').textContent = size;
+    document.getElementById('img-sl-intensity').value = parseFloat(intensity) || 0;
+    document.getElementById('lbl-img-intensity').textContent = intensity;
+    document.getElementById('img-sl-radius').value = parseFloat(radius) || 0;
+    document.getElementById('lbl-img-radius').textContent = radius;
+  } else {
+    imgBubble.style.display = 'none';
+    selectedFigure = null;
+  }
+});
+
+['size', 'intensity', 'radius'].forEach(prop => {
+  document.getElementById(`img-sl-${prop}`).addEventListener('input', (e) => {
+    if (!selectedFigure) return;
+    const val = e.target.value;
+    if (prop === 'size') {
+      selectedFigure.style.setProperty('--image-size', `${val}%`);
+      document.getElementById('lbl-img-size').textContent = `${val}%`;
+    } else if (prop === 'intensity') {
+      selectedFigure.style.setProperty('--texture-intensity', val);
+      document.getElementById('lbl-img-intensity').textContent = val;
+    } else if (prop === 'radius') {
+      selectedFigure.style.setProperty('--image-radius', `${val}px`);
+      document.getElementById('lbl-img-radius').textContent = `${val}px`;
+    }
+    markDirty(); updateStateFromUI(); updatePreview();
+  });
+});
+
+document.getElementById('btn-delete-img').addEventListener('click', () => {
+    if (selectedFigure) {
+        selectedFigure.remove();
+        imgBubble.style.display = 'none';
+        selectedFigure = null;
+        markDirty(); updateStateFromUI(); updatePreview();
+    }
+});
+
+// Slash Commands
+let slashActive = false;
+let slashRange = null;
+
+canvas.addEventListener('keyup', (e) => {
+  const sel = window.getSelection();
+  if (!sel.anchorNode) return;
+  
+  if (e.key === 'Escape') { closeSlash(); return; }
+  
+  const text = sel.anchorNode.textContent || '';
+  const textBeforeCaret = text.substring(0, sel.anchorOffset);
+  
+  if (textBeforeCaret.endsWith('/')) {
+    slashActive = true;
+    slashRange = sel.getRangeAt(0);
+    const rect = slashRange.getBoundingClientRect();
+    const cvsRect = document.getElementById('canvas-scroll').getBoundingClientRect();
+    
+    slashMenu.style.display = 'flex';
+    slashMenu.style.top = (rect.bottom - cvsRect.top + document.getElementById('canvas-scroll').scrollTop + 10) + 'px';
+    slashMenu.style.left = (rect.left - cvsRect.left) + 'px';
+  } else if(slashActive && !textBeforeCaret.endsWith('/')) {
+    closeSlash();
+  }
+});
+
+function closeSlash() {
+  slashActive = false;
+  slashMenu.style.display = 'none';
+  slashRange = null;
+}
+
+// Prevent mouse clicks on the slash menu from taking focus away from the editor
+slashMenu.addEventListener('mousedown', (e) => {
+  e.preventDefault(); 
+});
+
+slashMenu.addEventListener('click', (e) => {
+  const item = e.target.closest('.menu-item');
+  if(!item) return;
+  
+  const action = item.dataset.action;
+  closeSlash();
+  
+  // Directly use the selection that is currently active!
+  const sel = window.getSelection();
+  if (slashRange) {
+    sel.removeAllRanges();
+    sel.addRange(slashRange);
+    sel.modify('extend', 'backward', 'character');
+    document.execCommand('insertHTML', false, '<span id="slash-marker"></span>');
+  }
+  
+  if (action === 'divider') {
+    const mk = document.getElementById('slash-marker');
+    if(mk) { mk.insertAdjacentHTML('afterend', '<hr><p><br></p>'); mk.remove(); }
+    else document.execCommand('insertHTML', false, '<hr><p><br></p>');
+  } else if (action === 'image') {
+    openImageModal('inline'); // inline image
+  } else if (action === 'polaroid') {
+    openImageModal('polaroid'); // polaroid image
+  }
+  markDirty(); updateStateFromUI(); updatePreview();
+});
+
+// ── Image / Polaroid Modal ────────────
+let modalMode = 'inline'; 
+let selectedImageUrl = null;
+let editingPolaroidIndex = -1;
+
+async function openImageModal(mode, polaroidIndex = -1) {
+  modalMode = mode;
+  editingPolaroidIndex = polaroidIndex;
+  document.getElementById('image-modal').style.display = 'flex';
+  document.getElementById('polaroid-config').style.display = mode === 'polaroid' ? 'flex' : 'none';
+  document.getElementById('image-modal-title').textContent = mode === 'polaroid' ? (polaroidIndex >= 0 ? 'Edit Polaroid' : 'Create Polaroid') : 'Insert Image';
+  
+  if (mode === 'polaroid') {
+    if (polaroidIndex >= 0) {
+      document.getElementById('pol-title').value = editorPost.polaroids[polaroidIndex].title || '';
+      document.getElementById('pol-body').value = editorPost.polaroids[polaroidIndex].body || '';
+      document.getElementById('btn-add-polaroid').textContent = 'Save Polaroid';
+    } else {
+      document.getElementById('pol-title').value = '';
+      document.getElementById('pol-body').value = '';
+      document.getElementById('btn-add-polaroid').textContent = 'Add Polaroid';
+    }
+  }
+  
+  selectedImageUrl = null;
+  loadImagesLibrary();
+}
+
+function closeImageModal() { document.getElementById('image-modal').style.display = 'none'; }
+
+async function loadImagesLibrary() {
+  const grid = document.getElementById('image-grid');
+  grid.innerHTML = '<p class="loading" style="grid-column:1/-1">Loading...</p>';
+  try {
+    const images = await api('/api/admin/images');
+    grid.innerHTML = '';
+    images.forEach(img => {
+      const el = document.createElement('img');
+      el.src = img.url;
+      el.className = 'image-item';
+      el.onclick = () => selectImage(img.url, el);
+      grid.appendChild(el);
+    });
+  } catch(e) { grid.innerHTML = '<p style="grid-column:1/-1">Failed to load images</p>'; }
+}
+
+function selectImage(url, el) {
+  document.querySelectorAll('.image-item').forEach(i => i.style.borderColor = 'transparent');
+  el.style.borderColor = 'var(--accent)';
+  selectedImageUrl = url;
+  
+  if(modalMode === 'inline') {
+    closeImageModal();
+    canvas.focus();
+    const html = `<figure class="textured-image-container" style="--image-size: 100%; --texture-intensity: 0.85; --image-radius: 0px;"><img src="${url}"/></figure><p><br></p>`;
+    const mk = document.getElementById('slash-marker');
+    if (mk) {
+      mk.insertAdjacentHTML('afterend', html);
+      const insertedP = mk.nextElementSibling ? mk.nextElementSibling.nextElementSibling : null;
+      mk.remove();
+      if(insertedP) {
+        const sel = window.getSelection(); const r = document.createRange();
+        r.setStart(insertedP, 0); r.collapse(true);
+        sel.removeAllRanges(); sel.addRange(r);
+      }
+    } else {
+      document.execCommand('insertHTML', false, html);
+    }
+    markDirty(); updateStateFromUI(); updatePreview();
+  }
+}
+
+document.getElementById('upload-input').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const formData = new FormData(); formData.append('image', file);
+  try {
+    const res = await api('/api/admin/upload', { method: 'POST', body: formData });
+    loadImagesLibrary();
+  } catch(err) { alert('Upload failed'); }
+});
+
+document.getElementById('btn-add-polaroid').addEventListener('click', () => {
+  if(!selectedImageUrl && editingPolaroidIndex === -1) { alert('Select an image first'); return; }
+  
+  const title = document.getElementById('pol-title').value;
+  const body = document.getElementById('pol-body').value;
+  
+  if (editingPolaroidIndex >= 0) {
+    if(selectedImageUrl) editorPost.polaroids[editingPolaroidIndex].url = selectedImageUrl;
+    editorPost.polaroids[editingPolaroidIndex].title = title;
+    editorPost.polaroids[editingPolaroidIndex].body = body;
+  } else {
+    const rot = (Math.random() * 20) - 10;
+    const top = 20 + Math.random()*40;
+    editorPost.polaroids.push({
+      url: selectedImageUrl,
+      title, body,
+      rotation: rot.toFixed(2),
+      top: top.toFixed(2),
+      left: 50
+    });
+  }
+  
+  document.getElementById('pol-title').value = '';
+  document.getElementById('pol-body').value = '';
+  closeImageModal();
+  renderPolaroidList();
+  markDirty(); updatePreview();
+});
+
+// Initial boot
+render();
+</script>
+</body>
+</html>

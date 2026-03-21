@@ -177,8 +177,8 @@
     }
 
     .story-body {
-      font-size: 1.2rem;
-      line-height: 1.85;
+      font-size: var(--article-font-size, 1.2rem);
+      line-height: var(--article-line-height, 1.85);
       color: #333;
       max-width: 680px;
     }
@@ -186,10 +186,11 @@
     .story-body p {
       margin-bottom: 24px;
       text-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      /* Do NOT use 'transition: font-size' here, because text reflow transitions feel extremely glitchy/bouncy! */
     }
 
     .story-body p:first-child::first-letter {
-      font-size: 3.5rem;
+      font-size: calc(var(--article-font-size, 1.2rem) * 2.9);
       float: left;
       line-height: 1;
       margin-right: 10px;
@@ -592,17 +593,60 @@
   </div>
 
   <div class="story-container">
-    <!-- Glass Back Button (claymorphic, matches card glass style) -->
-    <button class="back-btn" id="back-btn">
-      <div class="glass-bend"></div>
-      <div class="glass-volume"></div>
-      <div class="glass-glare"></div>
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-        stroke-linecap="round" stroke-linejoin="round">
-        <path d="m15 18-6-6 6-6" />
-      </svg>
-      <span>Back</span>
-    </button>
+    
+    <!-- Top Nav Row (Back Button + Font Controls) -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; flex-wrap: wrap; gap: 20px;">
+      
+      <!-- Glass Back Button (claymorphic, matches card glass style) -->
+      <button class="back-btn" id="back-btn" style="margin-bottom: 0;">
+        <div class="glass-bend"></div>
+        <div class="glass-volume"></div>
+        <div class="glass-glare"></div>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+          <path d="m15 18-6-6 6-6" />
+        </svg>
+        <span>Back</span>
+      </button>
+
+      <!-- Glassmorphic Font Size Control -->
+      <div class="font-control glass-card" style="display: flex; align-items: center; gap: 14px; padding: 12px 24px; border-radius: 40px; background: transparent; box-shadow: 0 4px 15px rgba(0,0,0,0.1); flex-shrink: 0; min-width: 200px;">
+        <div class="glass-bend" style="border-radius: 40px;"></div>
+        <div class="glass-volume" style="border-radius: 40px;"></div>
+        <span style="font-size: 0.9rem; position:relative; z-index:4; font-weight: bold;">A</span>
+        
+        <!-- Native Slider element with custom CSS injection inline via style tag -->
+        <style>
+          input[type=range].font-slider {
+            -webkit-appearance: none;
+            background: rgba(0,0,0,0.15);
+            height: 4px;
+            border-radius: 2px;
+            outline: none;
+            width: 100px;
+            position: relative;
+            z-index: 4;
+            flex-grow: 1;
+          }
+          input[type=range].font-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #222;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            transition: transform 0.1s ease;
+          }
+          input[type=range].font-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+          }
+        </style>
+        
+        <input type="range" class="font-slider" id="font-slider" min="0.8" max="1.8" step="0.01" value="1.2">
+        <span style="font-size: 1.3rem; position:relative; z-index:4; font-weight: bold;">A</span>
+      </div>
+      
+    </div>
 
     <p class="story-date" id="story-date">Loading...</p>
     <h1 class="story-title" id="story-title">Loading...</h1>
@@ -617,7 +661,10 @@
     </div>
   </div>
 
+  <script src="tracker.js"></script>
   <script>
+    const API_BASE = window.API_BASE || 'http://localhost:4000';
+
     // =========================================================================
     //  DYNAMIC LIGHTING — RAF-throttled, lerp-smoothed
     // =========================================================================
@@ -645,118 +692,158 @@
     requestAnimationFrame(animateLoop);
 
     // =========================================================================
-    //  STORY DATA
-    // =========================================================================
-    const stories = {
-      "art-of-digital-paper": {
-        date: "October 24, 2026",
-        title: "The Art of Digital Paper",
-        body: `<p>There is something deeply unsettling about the perfection of a modern screen. Every pixel aligned, every gradient mathematically smooth, every edge anti-aliased into oblivion. We have engineered all the friction out of our visual experiences, and in doing so, we have made them feel lifeless.</p>
-                <p>Digital paper is an attempt to bring back what we lost. Not through crude imitation of physical media — not a JPEG of crumpled paper tiled across a background — but through procedural generation of the qualities that make physical materials feel alive: the subtle grain, the microscopic fiber structure, the way ambient light plays differently across every square centimeter.</p>
-                
-                [IMAGE_1]
-                
-                <p>WebGL shaders offer us the tools to generate these textures in real-time. A fragment shader can compute Perlin noise to create organic grain patterns. It can simulate the directional alignment of paper fibers. It can model the subtle variations in surface reflectivity that give physical paper its characteristic warmth.</p>
-                <p>The key insight is that these textures should never be static. Physical paper responds to its environment — it catches light differently as you tilt it, it develops a patina over time. Our digital paper should breathe in the same way, responding to cursor movement, scroll position, and even the time of day.</p>
-                <p>This is not skeuomorphism in the old sense. We are not trying to make a screen look like a desk. We are extracting the essential qualities of physical materials — their texture, their response to light, their imperfection — and translating those qualities into a digital language that screens can natively express.</p>`,
-      },
-      "liquid-interfaces": {
-        date: "October 20, 2026",
-        title: "Liquid Interfaces",
-        body: `<p>Every interface element you have ever interacted with has been a rigid box. Buttons are rectangles. Cards are rectangles. Modals are rectangles. The entire digital world is built from sharp-cornered containers that stack and tile with mechanical precision.</p>
-                <p>But what if interface elements could flow? What if a card could behave like a drop of mercury — holding its shape through surface tension, but deforming under pressure, splitting and merging, pooling at the bottom of the screen like rain on a windowpane?</p>
-                <p>The technology to achieve this is already here. CSS backdrop-filters give us real-time frosted glass. SVG displacement maps can warp any element as if it were being viewed through water. GSAP can animate any property with physically-modeled spring dynamics that make elements feel heavy and viscous rather than weightless and digital.</p>
-                <p>The challenge is restraint. A fully liquid interface would be unusable — we need the predictability of rigid layouts for navigation and content consumption. The liquid qualities should emerge only at the boundaries: the way a card separates from its stack, the way a button depresses under a click, the way a drawer slides open with a slight overshoot that suggests real mass and momentum.</p>
-                <p>These details are imperceptible in isolation, but collectively they transform the experience from using a tool to holding an object.</p>`,
-      },
-      "typography-as-texture": {
-        date: "September 12, 2026",
-        title: "Typography as Texture",
-        body: `<p>Modern typography has become invisible. We have optimized our typefaces for readability to such a degree that they have lost all character. Open Sans, Roboto, Inter — these are not fonts, they are anti-fonts. They are designed to disappear, to let content pass through them without friction.</p>
-                <p>There is a counter-movement emerging. Designers are reaching for fonts that have texture — that slow the reader down just enough to make them aware that they are reading. Typewriter fonts like Special Elite and Courier carry the ghosts of physical machines in every letterform. Each character sits slightly differently on its baseline, creating a rhythm that is human rather than mechanical.</p>
-                <p>This is not about nostalgia. It is about friction as a design tool. In a world where every surface is frictionless, the introduction of deliberate resistance — a font that makes you feel each word, a transition that takes just a beat longer than expected — creates moments of presence that smooth interfaces cannot achieve.</p>
-                <p>The typewriter aesthetic works particularly well in glass-morphism designs because it creates a tension between the hyper-modern translucency of the glass and the analog warmth of the type. The text appears to float inside the glass like specimens in amber, preserved and elevated by their container.</p>`,
-      },
-      "depth-in-flatness": {
-        date: "August 05, 2026",
-        title: "Depth in Flatness",
-        body: `<p>Flat design was a necessary correction. The skeuomorphic excesses of early iOS — with its felt textures, wood-grain address books, and leather-stitched calendars — had become a parody of themselves. The corrective was radical: strip away every shadow, gradient, and texture. What remains is pure function.</p>
-                <p>But in the decade since flat design triumphed, we have discovered its limitations. Purely flat interfaces lack hierarchy. Without depth cues, elements compete for attention on an equal plane. Users must rely entirely on color and size to distinguish interactive elements from decorative ones, primary actions from secondary ones.</p>
-                <p>The solution is not to return to skeuomorphism, but to develop a new vocabulary of depth. Subtle shadows that suggest elevation without depicting real-world materials. Glass-like translucency that creates layers without explicit borders. Motion that implies mass and momentum without mimicking physical objects.</p>
-                <p>This new depth is abstract rather than representational. A card does not look like a playing card — it is simply an element that exists at a certain elevation above others, casting a proportional shadow and blurring what lies beneath it. The Z-axis becomes a design dimension rather than a simulation.</p>`,
-      },
-      "the-new-skeuomorphism": {
-        date: "July 22, 2026",
-        title: "The New Skeuomorphism",
-        body: `<p>History does not repeat, but it rhymes. The design principles that Steve Jobs championed in early iOS are returning, transformed by a decade of flat design into something more sophisticated and restrained.</p>
-                <p>The new skeuomorphism does not try to make a screen look like a physical object. Instead, it borrows the physics of real objects — their weight, their reflectivity, their response to force — and applies those physics to digital elements. A button does not look like a plastic widget, but it depresses with a spring-damped animation that makes your finger feel the click.</p>
-                <p>Glass morphism is the purest expression of this trend. It takes one physical property — the translucency and refraction of glass — and makes it the foundation of an entire design language. No textures, no gradients, no decorative elements. Just light passing through a material, bent and scattered and blurred by its passage.</p>
-                <p>This convergence of physical realism and digital abstraction may be the synthesis that design has been searching for since the original iPhone. Not fake real, not pure flat, but something that is authentically digital while remaining corporeally satisfying.</p>`,
-      },
-      "kinetic-typography": {
-        date: "June 14, 2026",
-        title: "Kinetic Typography",
-        body: `<p>Words on a screen are weightless. They appear and disappear instantaneously, scroll without momentum, and rearrange themselves without regard for the space they previously occupied. This weightlessness makes digital text feel ephemeral and disposable.</p>
-                <p>Kinetic typography restores the physicality of words. A headline that drops into place with a slight bounce feels heavier, more permanent, more worthy of attention than one that simply appears. A paragraph that slides in with mass-proportional easing — heavy words arriving slower than light ones — creates a reading rhythm that mirrors the natural cadence of speech.</p>
-                <p>The mathematics of physical motion are well-established. Spring dynamics, damping coefficients, coefficient of restitution — these engineering principles translate directly into animation curves. GSAP's physics plugins make it trivial to apply real-world motion models to typography.</p>
-                <p>The result is text that feels carved rather than rendered, placed rather than displayed. Each word occupies its space with the conviction of a letterpress impression, and the transitions between states carry the momentum of physical objects being rearranged by unseen hands.</p>`,
-      },
-      "minimalist-color-theory": {
-        date: "May 09, 2026",
-        title: "Minimalist Color Theory",
-        body: `<p>Most digital interfaces use too much color. Every button is a different shade, every section has its own palette, every state change introduces a new hue. The result is visual noise that overwhelms the content it is meant to support.</p>
-                <p>Minimalist color theory proposes the opposite approach: use color only where it is absolutely necessary, and derive the rest of your visual hierarchy from contrast, spacing, and typography. A well-designed interface should be fully functional in grayscale, with color added only as a final layer of meaning.</p>
-                <p>In glass-morphism designs, color becomes even more complex because it is not applied — it is transmitted. The colors in a glass card are not the designer's colors; they are the colors of whatever lies beneath the glass, filtered and distorted by the material's properties. The designer's control is indirect: they choose the blur radius, the saturation multiplier, the tint opacity, and let the environment supply the actual hues.</p>
-                <p>This indirect approach to color creates interfaces that are inherently responsive to their context. The same glass card will look warm over a sunset photograph and cool over a winter landscape, adapting its palette without any programmatic intervention.</p>`,
-      },
-      "tactile-feedback": {
-        date: "April 02, 2026",
-        title: "Tactile Feedback",
-        body: `<p>We touch glass all day. The smooth, cold, perfectly flat surface of a phone screen or tablet is the primary texture of modern life. And yet the interfaces displayed on that glass do nothing to acknowledge the physical reality of the touch. A button on screen feels exactly like empty space — the same temperature, the same resistance, the same nothing.</p>
-                <p>Haptic feedback is beginning to change this. Modern devices can vibrate with enough precision to simulate texture, edges, and resistance. A well-implemented haptic response makes a button feel like it has depth — you feel the moment of engagement, the travel, and the bottom of the click.</p>
-                <p>But haptics are only half the equation. The visual response must match the physical sensation. If a button vibrates like it is being pressed 3mm into the screen, the visual animation must show exactly 3mm of depression, with shadows and highlights adjusting to match the new depth. Any mismatch between what you feel and what you see creates cognitive dissonance that breaks the illusion.</p>
-                <p>Micro-animations are the key to this synchronization. A 150ms spring-damped scale animation, perfectly timed to the haptic pulse, creates a moment of genuine tactile satisfaction that no amount of visual polish alone can achieve.</p>`,
-      },
-      "designing-the-unseen": {
-        date: "March 18, 2026",
-        title: "Designing the Unseen",
-        body: `<p>The most important element in any design is the space between the elements. Negative space is not empty — it is the silence between notes that gives music its rhythm, the pause between sentences that gives prose its pace. Without it, design becomes noise.</p>
-                <p>Premium interfaces are defined more by what they remove than by what they add. Every element that appears on screen should justify its existence. Every pixel of spacing should be intentional. Every absence should be felt as a deliberate choice rather than an oversight.</p>
-                <p>In glass-morphism designs, negative space takes on a literal transparency. The space around and between glass elements is not filled with a background color — it is a window through to whatever lies beneath. This creates a design that is simultaneously full and empty, present and absent.</p>
-                <p>The discipline of designing the unseen requires a fundamental shift in perspective. Instead of asking "what should I add here?" the designer asks "what can I remove?" Instead of filling space with content, they allow space to define the boundaries of content. The result is an interface that breathes — that gives the user room to think, to absorb, to be present with the content rather than overwhelmed by it.</p>`,
-      },
-    };
-
-    // =========================================================================
-    //  LOAD STORY CONTENT
+    //  LOAD STORY CONTENT FROM API / PREVIEW
     // =========================================================================
     const params = new URLSearchParams(window.location.search);
     const slug = params.get("slug");
+    const isPreview = params.get("preview") === "true";
 
-    if (slug && stories[slug]) {
-      const story = stories[slug];
-      document.getElementById("story-date").textContent = story.date;
-      document.getElementById("story-title").textContent = story.title;
+    function updatePreviewFromMessage(post) {
+      if (post.title !== undefined) document.getElementById("story-title").textContent = post.title || 'Untitled';
+      if (post.date !== undefined) document.getElementById("story-date").textContent = post.date || '';
+      if (post.body !== undefined) document.getElementById("story-body").innerHTML = post.body || '<p>Start typing...</p>';
       
-      // Look for [IMAGE_1], etc. triggers and load them from config if available
-      let resolvedBody = story.body;
-      const configMap = window.StoryImagesConfig ? window.StoryImagesConfig[slug] : null;
-      
-      if (configMap) {
-        for (const [placeholder, config] of Object.entries(configMap)) {
-          const intensity = config.textureIntensity !== undefined ? config.textureIntensity : 0.85;
-          const figureHTML = `
-            <figure class="textured-image-container" style="--image-size: ${config.size || '100%'}; --image-radius: ${config.radius || '0px'}; --texture-intensity: ${intensity};">
-              <img src="${config.src}" alt="${config.alt || ''}" />
-            </figure>
-          `;
-          resolvedBody = resolvedBody.split(placeholder).join(figureHTML);
+      if (post.glass_config) {
+        for (const [key, val] of Object.entries(post.glass_config)) {
+           document.documentElement.style.setProperty('--' + key.replace(/_/g, '-'), val);
         }
       }
       
-      document.getElementById("story-body").innerHTML = resolvedBody;
-      document.title = `${story.title} — Tactile Blog`;
+      if (post.polaroids) {
+        const container = document.querySelector('.polaroids-container');
+        container.innerHTML = '';
+        post.polaroids.forEach((p, i) => {
+          const side = i % 2 === 0 ? 'left-side' : 'right-side';
+          const wrapper = document.createElement('div');
+          wrapper.className = `polaroid-wrapper ${side}`;
+          // Use absolute percentages sent from editor
+          wrapper.style.top = p.top !== undefined ? `${p.top}%` : `${15 + i * 30}%`;
+          if (p.left !== undefined) wrapper.style.left = `${p.left}%`;
+          
+          wrapper.style.setProperty('--rotation', `${p.rotation || 0}deg`);
+          wrapper.innerHTML = `<div class="polaroid"><img src="${p.url || ''}" /></div>`;
+          
+          // Make draggable in preview mode
+          let startY = 0, startX = 0, initialTop = 0, initialLeft = 0;
+          wrapper.onmousedown = (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            startY = ev.clientY;
+            startX = ev.clientX;
+            
+            // Re-read current position instead of parsing original string
+            const rect = wrapper.getBoundingClientRect();
+            // We store current percentages
+            initialTop  = (rect.top / window.innerHeight) * 100;
+            initialLeft = (rect.left / window.innerWidth) * 100;
+            
+            document.onmousemove = (mv) => {
+              const dy = mv.clientY - startY;
+              const dx = mv.clientX - startX;
+              const newTop = initialTop + (dy / window.innerHeight * 100);
+              const newLeft = initialLeft + (dx / window.innerWidth * 100);
+              
+              wrapper.style.top = `${newTop}%`;
+              wrapper.style.left = `${newLeft}%`;
+              // No translateX needed if we use absolute left
+              wrapper.style.transform = `translateX(0)`; 
+              
+              window.parent.postMessage({ type: 'POLAROID_MOVED', index: i, top: newTop, left: newLeft }, '*');
+            };
+            document.onmouseup = () => {
+              document.onmousemove = null;
+              document.onmouseup = null;
+            };
+          };
+          container.appendChild(wrapper);
+        });
+      }
+    }
+
+    if (isPreview) {
+      window.addEventListener("message", (e) => {
+        if (e.data && e.data.type === 'TICK' && e.data.post) {
+          updatePreviewFromMessage(e.data.post);
+        }
+      });
+      // Ping parent to say we're ready
+      window.parent.postMessage({ type: 'PREVIEW_READY' }, '*');
     } else {
+      (async function loadStory() {
+        if (!slug) {
+          showNotFound();
+          return;
+        }
+
+        try {
+          const res = await fetch(`${API_BASE}/api/posts/${slug}`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const post = await res.json();
+
+          // Populate meta
+          const dateStr = new Date(post.date).toLocaleDateString('en-US', {
+            year: 'numeric', month: 'long', day: '2-digit',
+          });
+          document.getElementById("story-date").textContent = dateStr;
+          document.getElementById("story-title").textContent = post.title;
+          document.title = `${post.title} — Tactile Blog`;
+
+          // Resolve body
+          let resolvedBody = post.body || '';
+          const configMap = window.StoryImagesConfig ? window.StoryImagesConfig[slug] : null;
+
+          if (configMap) {
+            for (const [placeholder, config] of Object.entries(configMap)) {
+              const intensity = config.textureIntensity !== undefined ? config.textureIntensity : 0.85;
+              const figureHTML = `
+                <figure class="textured-image-container" style="--image-size: ${config.size || '100%'}; --image-radius: ${config.radius || '0px'}; --texture-intensity: ${intensity};">
+                  <img src="${config.src}" alt="${config.alt || ''}" />
+                </figure>
+              `;
+              resolvedBody = resolvedBody.split(placeholder).join(figureHTML);
+            }
+          }
+
+          document.getElementById("story-body").innerHTML = resolvedBody;
+
+          // Render polaroids
+          if (post.polaroids && Array.isArray(post.polaroids) && post.polaroids.length > 0) {
+            const container = document.querySelector('.polaroids-container');
+            container.innerHTML = '';
+
+            post.polaroids.forEach((p, i) => {
+              const side = i % 2 === 0 ? 'left-side' : 'right-side';
+              const wrapper = document.createElement('div');
+              wrapper.className = `polaroid-wrapper ${side}`;
+              wrapper.style.top = `${p.top || (15 + i * 30)}%`;
+              if (p.left !== undefined) {
+                wrapper.style.left = `${p.left}%`;
+                wrapper.classList.remove('left-side', 'right-side');
+              }
+              wrapper.style.setProperty('--rotation', `${p.rotation || 0}deg`);
+              wrapper.dataset.title = p.title || '';
+              wrapper.dataset.text = p.body || '';
+              wrapper.dataset.img = p.url || '';
+
+              wrapper.innerHTML = `
+                <div class="polaroid">
+                  <img src="${p.url || ''}" alt="${p.alt || ''}" />
+                </div>
+              `;
+              container.appendChild(wrapper);
+            });
+          }
+        } catch (err) {
+          console.error('[loadStory]', err);
+          showNotFound();
+        }
+
+        // Re-bind polaroid click handlers
+        initPolaroidClicks();
+      })();
+    }
+
+    function showNotFound() {
       document.getElementById("story-title").textContent = "Story Not Found";
       document.getElementById("story-body").innerHTML =
         '<p>The requested story could not be found. <a href="index.html">Return to home</a>.</p>';
@@ -798,32 +885,30 @@
     });
 
     // =========================================================================
-    //  FLOAT PHYSICS FOR POLAROIDS
+    //  FLOAT PHYSICS FOR POLAROIDS — binds click handlers
     // =========================================================================
-    const polaroids = document.querySelectorAll(".polaroid-wrapper");
+    function initPolaroidClicks() {
+      const polaroids = document.querySelectorAll(".polaroid-wrapper");
 
-    polaroids.forEach((wrapper, i) => {
-      const inner = wrapper.querySelector(".polaroid");
+      polaroids.forEach((wrapper, i) => {
+        // Click to open modal
+        wrapper.addEventListener("click", () => {
+          const title = wrapper.getAttribute("data-title");
+          const text = wrapper.getAttribute("data-text");
+          const img = wrapper.getAttribute("data-img");
 
-      // Floating animation removed per user request
+          document.getElementById("modal-img").src = img;
+          document.getElementById("modal-title").textContent = title;
+          document.getElementById("modal-text").textContent = text;
 
-      // Hover effect to bring to center smoothly - optional, but let's just use CSS scale + shadow
-      // Instead of jumping in JS, CSS transition handles the scale. Let GSAP handle the float.
-
-      // Click to open modal
-      wrapper.addEventListener("click", () => {
-        const title = wrapper.getAttribute("data-title");
-        const text = wrapper.getAttribute("data-text");
-        const img = wrapper.getAttribute("data-img");
-
-        document.getElementById("modal-img").src = img;
-        document.getElementById("modal-title").textContent = title;
-        document.getElementById("modal-text").textContent = text;
-
-        const modal = document.getElementById("polaroid-modal");
-        modal.classList.add("active");
+          const modal = document.getElementById("polaroid-modal");
+          modal.classList.add("active");
+        });
       });
-    });
+    }
+
+    // Bind for the initial hardcoded polaroids (if any remain)
+    initPolaroidClicks();
 
     // =========================================================================
     //  POLAROID MODAL CONTROLS
@@ -838,6 +923,19 @@
 
     modalClose.addEventListener("click", closeModal);
     modalBackdrop.addEventListener("click", closeModal);
+
+    // =========================================================================
+    //  FONT SIZE SLIDER CONTROLS
+    // =========================================================================
+    const fontSlider = document.getElementById("font-slider");
+    const storyBody = document.getElementById("story-body");
+
+    // We change the CSS variable dynamically frame-by-frame natively 
+    // to provide completely smooth, un-glitchy visual feedback
+    fontSlider.addEventListener("input", (e) => {
+      const val = e.target.value;
+      storyBody.style.setProperty('--article-font-size', `${val}rem`);
+    });
   </script>
 </body>
 
