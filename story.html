@@ -22,11 +22,14 @@
       /* Modal Background Controls */
       --modal-glass-blur: 09px;
       /* How blurry the modal glass is. Default cards are 8px. */
-      --modal-glass-tint: rgba(255,
-          255,
-          255,
-          0.18);
+      --modal-glass-tint: rgba(0, 0, 0, 0.02);
       /* Whiteness of the modal background. Increase 0.45 for more visibility of text. */
+
+      --modal-text-color: #fffbfb;
+      /* Color of the text inside the polaroid modal. Change to #ffffff for pure white text. */
+
+      --modal-glare-opacity: 0.04;
+      /* Brightness of the glass glare glow when you move your mouse. Range 0.0 to 1.0 */
 
       --glass-radius: 36px;
       --blur-radius: 8px;
@@ -194,6 +197,39 @@
       color: #1a1a1a;
     }
 
+    .textured-image-container {
+      position: relative;
+      /* Manual control fallback */
+      width: var(--image-size, 100%);
+      max-width: 100%;
+      margin: 40px auto;
+      /* Manual radius control fallback */
+      border-radius: var(--image-radius, 0px);
+      overflow: hidden;
+      display: block; /* Let width constraint handle sizing naturally */
+    }
+
+    .textured-image-container img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .textured-image-container::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      /* Pull the explicit wallpaper texture from the body background */
+      background-image: url("background.jpg");
+      background-size: cover;
+      /* Multiply completely removes the light/white pixels of the texture, 
+         burning the dark paper fibers perfectly directly into the image */
+      mix-blend-mode: multiply;
+      pointer-events: none;
+      /* Dynamic intensity loaded from javascript */
+      opacity: var(--texture-intensity, 0.85);
+    }
+
     /* Footer */
     .story-footer {
       margin-top: 80px;
@@ -273,7 +309,7 @@
       inset: 0;
       border-radius: inherit;
       background: radial-gradient(800px circle at calc(var(--mouse-x) * 1%) calc(var(--mouse-y) * 1%),
-          rgba(255, 255, 255, var(--glare-opacity)),
+          rgba(255, 255, 255, var(--modal-glare-opacity)),
           transparent 40%);
       z-index: 3;
       pointer-events: none;
@@ -359,7 +395,7 @@
 
     .modal-right {
       flex: 1;
-      color: #1c1c1c;
+      color: var(--modal-text-color);
       overflow-y: auto;
       font-size: 1.15rem;
       line-height: 1.7;
@@ -489,6 +525,8 @@
       }
     }
   </style>
+  <!-- Image parsing configuration file must be loaded before rendering logic -->
+  <script src="image-config.js"></script>
 </head>
 
 <body>
@@ -615,6 +653,9 @@
         title: "The Art of Digital Paper",
         body: `<p>There is something deeply unsettling about the perfection of a modern screen. Every pixel aligned, every gradient mathematically smooth, every edge anti-aliased into oblivion. We have engineered all the friction out of our visual experiences, and in doing so, we have made them feel lifeless.</p>
                 <p>Digital paper is an attempt to bring back what we lost. Not through crude imitation of physical media — not a JPEG of crumpled paper tiled across a background — but through procedural generation of the qualities that make physical materials feel alive: the subtle grain, the microscopic fiber structure, the way ambient light plays differently across every square centimeter.</p>
+                
+                [IMAGE_1]
+                
                 <p>WebGL shaders offer us the tools to generate these textures in real-time. A fragment shader can compute Perlin noise to create organic grain patterns. It can simulate the directional alignment of paper fibers. It can model the subtle variations in surface reflectivity that give physical paper its characteristic warmth.</p>
                 <p>The key insight is that these textures should never be static. Physical paper responds to its environment — it catches light differently as you tilt it, it develops a patina over time. Our digital paper should breathe in the same way, responding to cursor movement, scroll position, and even the time of day.</p>
                 <p>This is not skeuomorphism in the old sense. We are not trying to make a screen look like a desk. We are extracting the essential qualities of physical materials — their texture, their response to light, their imperfection — and translating those qualities into a digital language that screens can natively express.</p>`,
@@ -696,7 +737,24 @@
       const story = stories[slug];
       document.getElementById("story-date").textContent = story.date;
       document.getElementById("story-title").textContent = story.title;
-      document.getElementById("story-body").innerHTML = story.body;
+      
+      // Look for [IMAGE_1], etc. triggers and load them from config if available
+      let resolvedBody = story.body;
+      const configMap = window.StoryImagesConfig ? window.StoryImagesConfig[slug] : null;
+      
+      if (configMap) {
+        for (const [placeholder, config] of Object.entries(configMap)) {
+          const intensity = config.textureIntensity !== undefined ? config.textureIntensity : 0.85;
+          const figureHTML = `
+            <figure class="textured-image-container" style="--image-size: ${config.size || '100%'}; --image-radius: ${config.radius || '0px'}; --texture-intensity: ${intensity};">
+              <img src="${config.src}" alt="${config.alt || ''}" />
+            </figure>
+          `;
+          resolvedBody = resolvedBody.split(placeholder).join(figureHTML);
+        }
+      }
+      
+      document.getElementById("story-body").innerHTML = resolvedBody;
       document.title = `${story.title} — Tactile Blog`;
     } else {
       document.getElementById("story-title").textContent = "Story Not Found";
